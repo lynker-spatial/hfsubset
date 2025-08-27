@@ -1,4 +1,4 @@
-^ngsubset\.Rproj$
+^hfsubset\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
 data-raw
@@ -7,3 +7,4 @@ outputs.zip
 ^.*\.gpkg$
 ^.*\.gpkg-wal$
 ^.*\.gpkg-shm$
+^README\.Rmd$

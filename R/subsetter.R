@@ -31,6 +31,7 @@ st_exists <- function(gpkg, layer){
 #' @importFrom rlang .data
 #' @importFrom hfsubsetR as_ogr st_as_sf
 #' @importFrom sf write_sf st_layers
+#' @export
 
 hfsubset <- function(gpkg,
                      id,
@@ -87,9 +88,9 @@ hfsubset <- function(gpkg,
       filter(flowpath_id == id) |>
       collect()
   } else if (!missing(comid)) {
-    tmp <- filter(ngsubset::ref_net, flowpath_id == !!comid)
+    tmp <- filter(hfsubset::ref_net, flowpath_id == !!comid)
   } else if (!missing(hl_reference)) {
-    tmp <- filter(ngsubset::ref_net, hl_reference == !!hl_reference)
+    tmp <- filter(hfsubset::ref_net, hl_reference == !!hl_reference)
   } else {
     cli::cli_alert_danger("Origin must be provided.")
   }
@@ -102,7 +103,7 @@ hfsubset <- function(gpkg,
   cli::cli_alert_info("Origin flowpath: {origin_fp} (VPU: {origin_vpu})")
 
   # ---- build VPU subgraph --------------------------------------------------
-  ids <- filter(ngsubset::ref_net, vpuid == tmp$vpuid) |>
+  ids <- filter(hfsubset::ref_net, vpuid == tmp$vpuid) |>
     select(flowpath_id, flowpath_toid) |>
     distinct() |>
     tidyr::drop_na(flowpath_toid) |>

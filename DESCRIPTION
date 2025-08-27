@@ -1,4 +1,4 @@
-Package: ngsubset
+Package: hfsubset
 Title: Lightweight subsetter for hydrofabric files
 Version: 0.1
 Authors@R: 
@@ -27,5 +27,5 @@ Depends:
     R (>= 3.5)
 LazyData: true
 LazyDataCompression: xz
-URL: https://github.com/lynker-spatial/ngsubset
-BugReports: https://github.com/lynker-spatial/ngsubset/issues
+URL: https://github.com/lynker-spatial/hfsubset
+BugReports: https://github.com/lynker-spatial/hfsubset/issues

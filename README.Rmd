@@ -1,0 +1,39 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+base_dir <-  '/Users/mikejohnson/hydrofabric'
+```
+
+# hfsubset
+
+<!-- badges: start -->
+[![License: Apache License (>= 2)](https://img.shields.io/badge/License-Apache%20License%20%28%3E%3D%202%29-blue.svg)](https://choosealicense.com/licenses/apache-2.0/)
+[![LifeCycle](https://img.shields.io/badge/lifecycle-experimental-orange)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![Dependencies](https://img.shields.io/badge/dependencies-7/74-orange?style=flat)](#)
+<!-- badges: end -->
+
+```{r}
+library(hfsubset)
+
+hfsubset(gpkg =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
+         hl_reference = "nwis-07187000") |> 
+  str(max.level = 1)
+
+hfsubset(gpkg =   glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
+         hl_reference = "nwis-07187000") |> 
+  str(max.level = 1)
+
+hfsubset(gpkg =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
+         hl_reference = "nwis-07187000") |> 
+  str(max.level = 1)
+```
