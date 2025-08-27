@@ -1,0 +1,30 @@
+Package: ngsubset
+Title: Lightweight subsetter for hydrofabric files
+Version: 0.1
+Authors@R: 
+     person("
+      given = Mike", 
+      family = "Johnson", 
+      email = "mjohnson@lynker.com", 
+      role = c("aut", "cre")
+    )
+Description: Generate subsets from NextGen Hydrofabrics.
+License: Apache License (>= 2)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    cli,
+    dplyr,
+    hfsubsetR,
+    igraph,
+    rlang,
+    sf,
+    tidyr
+Remotes: 
+    lynker-spatial/hfsubsetR
+Depends: 
+    R (>= 3.5)
+LazyData: true
+LazyDataCompression: xz
+

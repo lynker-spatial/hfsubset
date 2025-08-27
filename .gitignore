@@ -1,0 +1,11 @@
+.Rproj.user
+outputs
+outputs.zip
+*.gpkg
+*.gpkg-shm
+*.gpkg-wal
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto

@@ -1,0 +1,9 @@
+^ngsubset\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+data-raw
+outputs
+outputs.zip
+^.*\.gpkg$
+^.*\.gpkg-wal$
+^.*\.gpkg-shm$
