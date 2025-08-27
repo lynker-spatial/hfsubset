@@ -27,4 +27,5 @@ Depends:
     R (>= 3.5)
 LazyData: true
 LazyDataCompression: xz
-
+URL: https://github.com/lynker-spatial/ngsubset
+BugReports: https://github.com/lynker-spatial/ngsubset/issues
