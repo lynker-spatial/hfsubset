@@ -8,3 +8,5 @@ outputs.zip
 ^.*\.gpkg-wal$
 ^.*\.gpkg-shm$
 ^README\.Rmd$
+^\.github$
+^_pkgdown\.yaml$

@@ -29,7 +29,7 @@ st_exists <- function(gpkg, layer){
 #' @importFrom tidyr drop_na
 #' @importFrom cli cli_abort cli_alert_info cli_alert_success
 #' @importFrom rlang .data
-#' @importFrom hfsubsetR as_ogr st_as_sf
+#' @importFrom hfutils as_ogr st_as_sf
 #' @importFrom sf write_sf st_layers
 #' @export
 

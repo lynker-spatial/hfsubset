@@ -2,8 +2,8 @@ Package: hfsubset
 Title: Lightweight subsetter for hydrofabric files
 Version: 0.1
 Authors@R: 
-     person("
-      given = Mike", 
+     person(
+      given = "Mike", 
       family = "Johnson", 
       email = "mjohnson@lynker.com", 
       role = c("aut", "cre")
@@ -16,13 +16,13 @@ RoxygenNote: 7.3.2
 Imports: 
     cli,
     dplyr,
-    hfsubsetR,
+    hfutils,
     igraph,
     rlang,
     sf,
     tidyr
 Remotes: 
-    lynker-spatial/hfsubsetR
+    lynker-spatial/hfutils
 Depends: 
     R (>= 3.5)
 LazyData: true
