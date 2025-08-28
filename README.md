@@ -20,7 +20,7 @@ To use, define a source geopackage and a hydrologic location reference
 (`hl_reference`)). The function will return an `sf` object for each
 requested layer containing all upstream features.
 
-An hl_reference is defined as `{source}-{native_id}`, so, if you were
+A `hl_reference` is defined as `{source}-{native_id}`, so, if you were
 looking for the NWIS gage 07187000 you would use `nwis-07187000`.
 
 ``` r
