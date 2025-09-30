@@ -35,8 +35,4 @@ lookups in hydrologic network analysis. A single \code{flowpath_id} can
 appear multiple times when multiple \code{hl_reference} entries are
 associated with it. Use dplyr::distinct where it makes sense :)
 }
-\examples{
-data(ref_net)
-dplyr::filter(ref_net, flowpath_id == 931090014)
-}
 \keyword{datasets}

@@ -24,9 +24,4 @@
 #' associated with it. Use dplyr::distinct where it makes sense :)
 #'
 #' @source Derived from lynker-spatial data products.
-#'
-#' @examples
-#' data(ref_net)
-#' dplyr::filter(ref_net, flowpath_id == 931090014)
-
 "ref_net"

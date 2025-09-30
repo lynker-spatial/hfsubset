@@ -1,9 +1,11 @@
+#' Create a new store structure
 #' @keywords internal
 new_store <- function(...) {
   structure(list(...), class = "store")
 }
 
 
+#' Check if a store has a layer
 #' @returns `logical(n)`
 #' @keywords internal
 store_has_layer <- function(store, layer, ...) {
@@ -20,6 +22,7 @@ store_has_layer <- function(store, layer, ...) {
 }
 
 
+#' Get a store layer
 #' @returns Object inheriting from `tbl`
 #' @keywords internal
 store_get_layer <- function(store, layer, ...) {

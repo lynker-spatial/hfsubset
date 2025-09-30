@@ -70,7 +70,7 @@ store_get_layer.lynker_spatial_store <- function(store, layer, ...) {
 
 
 #' Create a new DuckDB connection.
-#' @param ... Arguments passed to [DBI::dbConnect].
+#' @param ... Arguments passed to [DBI::dbConnect()].
 #' @param extensions Character vector of extensions to install and load on connect.
 #' @returns A DBI connection to a DuckDB instance.
 #' @keywords internal
