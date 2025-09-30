@@ -29,7 +29,7 @@ To use, define a source geopackage and a hydrologic location reference (e.g. NHD
 
 A `hl_reference` is defined as `{source}-{native_id}`, so, if you were looking for the NWIS gage 07187000 you would use `nwis-07187000`.
 
-```{r}
+```{r, warning=FALSE}
 library(hfsubset)
 
 hfsubset(src =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
