@@ -232,7 +232,7 @@ hfsubset <- function(src,
 
   if ("divide-attributes" %in% lyrs && has("divide-attributes")) {
     out[["divide-attributes"]] <- .as_tbl(src, "divide-attributes", store) |>
-      dplyr::filter(.data$divide_id %in% !!net$divide_id) |>
+      dplyr::filter(divide_id %in% !!net$divide_id) |>
       collect()
   }
 
@@ -251,6 +251,13 @@ hfsubset <- function(src,
 
   if ("hydrolocations" %in% lyrs && has("hydrolocations")) {
     out[["hydrolocations"]] <- .as_tbl(src, "hydrolocations", store) |>
+      .filter_by(fp_key, fp_vals) |>
+      collect() |>
+      st_as_sf()
+  }
+
+  if ("events" %in% lyrs && has("events")) {
+    out[["events"]] <- .as_tbl(src, "events", store) |>
       .filter_by(fp_key, fp_vals) |>
       collect() |>
       st_as_sf()
