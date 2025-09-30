@@ -94,7 +94,7 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 #' @importFrom tidyr drop_na
 #' @importFrom cli cli_abort cli_alert_info cli_alert_success
 #' @importFrom rlang .data
-#' @importFrom hfutils as_ogr st_as_sf
+#' @importFrom hfutils as_ogr st_as_sf write_hydrofabric
 #' @importFrom sf write_sf st_layers
 #' @export
 hfsubset <- function(src,

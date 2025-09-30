@@ -2,20 +2,22 @@
 % Please edit documentation in R/subsetter.R
 \name{hfsubset}
 \alias{hfsubset}
-\title{Subset a NextGen GeoPackage upstream of an origin feature}
+\title{Subset a NextGen HydroFabric from either a GPKG or layered Hive-partitioned GeoParquets}
 \usage{
 hfsubset(
-  gpkg,
+  src,
   id,
   comid,
   hl_reference,
   outfile,
   lyrs = c("flowpaths", "divides", "nexus", "network", "hydrolocations", "pois",
-    "flowpath-attributes", "divide-attributes")
+    "flowpath-attributes", "divide-attributes", "events"),
+  crs = NULL
 )
 }
 \arguments{
-\item{gpkg}{Path to a NextGen GeoPackage.}
+\item{src}{Path to a GeoPackage (.gpkg) OR the root directory of layered
+hive-partitioned GeoParquet (e.g., \if{html}{\out{<root>}}/\if{html}{\out{<layer>}}/v1/vpu=01/part-*.parquet).}
 
 \item{id}{Origin \code{flowpath_id} (character).}
 
@@ -26,21 +28,18 @@ hfsubset(
 \item{outfile}{Optional path to write the subset to a new GeoPackage.}
 
 \item{lyrs}{Character vector of layer names to extract. Defaults to
-\code{c("flowpaths","divides","nexus","network","flowpath-attributes","divide-attributes")}.}
+c("flowpaths","divides","nexus","network","hydrolocations","pois",
+"flowpath-attributes","divide-attributes").}
+
+\item{crs}{Optional EPSG/int for sf outputs when reading GeoParquet (recommended if CRS missing).}
+
+\item{store}{Optional. One of "gpkg" or "geoparquet". If missing, inferred.}
 }
 \value{
-A named list of tibbles/sf objects if \code{outfile} is missing;
-otherwise (invisibly) the list after writing to \code{outfile}.
+A named list of tibbles/sf if \code{outfile} is missing; invisibly the list after writing otherwise.
 }
 \description{
-Given a NextGen GeoPackage and an origin identifier (by \code{flowpath_id},
+Given a HydroFabric store and an origin identifier (by \code{flowpath_id},
 by an external \code{comid}, or by an \code{hl_reference} tag), build an upstream
-subgraph return/write filtered layers.
-}
-\examples{
-
-\dontrun{
-  out <- nextgen_subset("hydrofabric.gpkg", hl_reference = "nwis-09112500")
-}
-
+subgraph and return/write filtered layers.
 }
