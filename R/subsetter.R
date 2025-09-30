@@ -109,7 +109,8 @@ hfsubset <- function(src,
                               "hydrolocations",
                               "pois",
                               "flowpath-attributes",
-                              "divide-attributes"),
+                              "divide-attributes",
+                              "events"),
                      crs = NULL) {
 
   # Infer store if not provided
