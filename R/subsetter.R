@@ -1,16 +1,25 @@
 .infer_store <- function(src) {
-  # 1) Extension signals
-  if (grepl("\\.gpkg$", src, ignore.case = TRUE)) return("gpkg")
-  if (grepl("\\.parquet$", src, ignore.case = TRUE)) return("geoparquet")
-
-  # 2) Local directory with parquet children?
-  if (dir.exists(src)) {
-    pq <- try(length(list.files(src, pattern = "\\.parquet$", recursive = TRUE)) > 0, silent = TRUE)
-    if (!inherits(pq, "try-error") && isTRUE(pq)) return("geoparquet")
+  # Lynker Spatial Store
+  if (startsWith(src, "ls://")) {
+    groups <- regmatches(src, regexec("ls://(\\d\\.\\d)/(.*)/(.*)", src))[[1]]
+    return(
+      lynker_spatial_store(
+        version = groups[2],
+        domain = groups[3],
+        kind = groups[4]
+      )
+    )
   }
 
-  # 3) S3 path heuristic: assume geoparquet root unless .gpkg path
-  if (grepl("^s3://", src)) return("geoparquet")
+  # S3 File
+  if (endsWith(src, ".parquet") || startsWith(src, "s3://") || dir.exists(src)) {
+    arrow_store(src)
+  }
+
+  # Local File
+  if (endsWith(src, ".gpkg")) {
+    ogr_store(src)
+  }
 
   cli::cli_abort(c("!" = "Could not infer store type from: {src}",
                    "i" = "Pass store='gpkg' or store='geoparquet'."))
@@ -24,7 +33,16 @@ st_exists <- function(src, layer, store = c("gpkg","geoparquet")) {
     return(layer %in% layers)
   } else {
     # geoparquet: try opening dataset metadata under <src>/<layer>
-    p <- file.path(src, layer)
+    if (startsWith(src, "https://")) {
+      p <- paste0(
+        src,
+        ifelse(!endsWith(src, "/"), "/", ""),
+        layer
+      )
+    } else {
+      p <- file.path(src, layer)
+    }
+
     ok <- try({
       ds <- arrow::open_dataset(p)
       invisible(ds$schema$names) # touch metadata
@@ -115,7 +133,7 @@ hfsubset <- function(src,
 
   # Infer store if not provided
   store <- .infer_store(src)
-  cli::cli_alert_info("Inferred store type: {store}")
+  cli::cli_alert_info("Inferred store type: {class(store)[1]}")
 
   divide_id <-
     flowpath_id <-
@@ -148,12 +166,12 @@ hfsubset <- function(src,
   }
 
   # ---- find origin row (network layer) -------------------------------------
-  if (!st_exists(src, "network", store)) {
+  if (!store_has_layer(store, "network")) {
     cli::cli_abort(c("!" = "Couldn't find a {.strong network} layer in the source."))
   }
 
   if (!missing(id)) {
-    tmp <- .as_tbl(src, "network", store) |>
+    tmp <- store_get_layer(store, "network") |>
       dplyr::filter(flowpath_id == id) |>
       dplyr::collect()
   } else if (!missing(comid)) {
@@ -178,7 +196,7 @@ hfsubset <- function(src,
     igraph::graph_from_data_frame(directed = TRUE) |>
     .get_upstream(node_id = tmp$flowpath_id)
 
-  net <- .as_tbl(src, "network", store) |>
+  net <- store_get_layer(store, "network") |>
     dplyr::filter(hf_id %in% ids) |>
     dplyr::collect()
 
@@ -201,66 +219,66 @@ hfsubset <- function(src,
 
   # ---- filter requested layers --------------------------------------------
   out <- list()
-  has <- function(ly) st_exists(src, ly, store)
+  has <- function(ly) store_has_layer(store, ly)
 
   if ("network" %in% lyrs && has("network")) {
-    out[["network"]] <- .as_tbl(src, "network", store) |>
+    out[["network"]] <- store_get_layer(store, "network") |>
       dplyr::filter(hf_id %in% ids) |>
-      collect()
+      dplyr::collect()
   }
 
   if ("flowpaths" %in% lyrs && has("flowpaths")) {
-    out[["flowpaths"]] <- .as_tbl(src, "flowpaths", store) |>
+    out[["flowpaths"]] <- store_get_layer(store, "flowpaths") |>
       .filter_by(fp_key, fp_vals) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if ("divides" %in% lyrs && has("divides")) {
-    out[["divides"]] <- .as_tbl(src, "divides", store) |>
+    out[["divides"]] <- store_get_layer(store, "divides") |>
       dplyr::filter(divide_id %in% !!net$divide_id) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if ("nexus" %in% lyrs && has("nexus")) {
-    out[["nexus"]] <- .as_tbl(src, "nexus", store) |>
+    out[["nexus"]] <- store_get_layer(store, "nexus") |>
       .filter_by(nx_key, nx_vals) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if ("divide-attributes" %in% lyrs && has("divide-attributes")) {
-    out[["divide-attributes"]] <- .as_tbl(src, "divide-attributes", store) |>
-      dplyr::filter(divide_id %in% !!net$divide_id) |>
-      collect()
+    out[["divide-attributes"]] <- store_get_layer(store, "divide-attributes") |>
+      dplyr::filter(.data$divide_id %in% !!net$divide_id) |>
+      dplyr::collect()
   }
 
   if ("flowpath-attributes" %in% lyrs && has("flowpath-attributes")) {
-    out[["flowpath-attributes"]] <- .as_tbl(src, "flowpath-attributes", store) |>
+    out[["flowpath-attributes"]] <- store_get_layer(store, "flowpath-attributes") |>
       .filter_by(fp_key, fp_vals) |>
-      collect()
+      dplyr::collect()
   }
 
   if ("pois" %in% lyrs && has("pois")) {
-    out[["pois"]] <- .as_tbl(src, "pois", store) |>
+    out[["pois"]] <- store_get_layer(store, "pois") |>
       .filter_by(fp_key, fp_vals) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if ("hydrolocations" %in% lyrs && has("hydrolocations")) {
-    out[["hydrolocations"]] <- .as_tbl(src, "hydrolocations", store) |>
+    out[["hydrolocations"]] <- store_get_layer(store, "hydrolocations") |>
       .filter_by(fp_key, fp_vals) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if ("events" %in% lyrs && has("events")) {
-    out[["events"]] <- .as_tbl(src, "events", store) |>
+    out[["events"]] <- store_get_layer(store, "events") |>
       .filter_by(fp_key, fp_vals) |>
-      collect() |>
-      st_as_sf()
+      dplyr::collect() |>
+      sf::st_as_sf()
   }
 
   if (!missing(outfile)) {
