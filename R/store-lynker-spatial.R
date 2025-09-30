@@ -1,5 +1,5 @@
 #' @keywords internal
-lynker_spatial_store <- function(version, domain, kind) {
+lynker_spatial_store <- function(version, domain, kind, ..., conn = duckdb_connection(extensions = "httpfs")) {
   # TODO(justin): this is a mess
 
   if (startsWith(version, "v")) {
@@ -27,10 +27,10 @@ lynker_spatial_store <- function(version, domain, kind) {
       "https://proxy.lynker-spatial.com/hydrofabric/v%s/%s/%s",
       version, domain, kind
     ),
-    conn = duckdb_connection(extensions = "httpfs")
+    conn = conn
   )
 
-  hfutils::lynker_spatial_auth(libs = "duckdb", duckdb_con = store$conn)
+  hfutils::lynker_spatial_auth(libs = c("gdal", "duckdb"), duckdb_con = store$conn)
 
   class(store) <- c("lynker_spatial_store", class(store))
   store

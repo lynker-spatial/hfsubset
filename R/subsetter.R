@@ -294,7 +294,7 @@ hfsubset <- function(
     out[[layer]] <- dplyr::collect(.tbl)
     if (layer %in% c("flowpaths", "divides", "nexus", "hydrolocations", "pois", "events")) {
       out[[layer]] <- tryCatch(
-        sf::st_as_sf(out[[layer]]),
+        sf::st_as_sf(out[[layer]], crs = 5070),
         error = function(condition) out[[layer]]
       )
     }
