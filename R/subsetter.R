@@ -164,7 +164,8 @@ hfsubset <- function(
     "divide-attributes",
     "events"
   ),
-  crs = NULL
+  crs = NULL,
+  verbose = FALSE
 ) {
   # Infer store if not provided
   store <- .infer_store(src)
@@ -272,7 +273,9 @@ hfsubset <- function(
     }
 
     if (!store_has_layer(store, layer)) {
-      warning("layer `", layer, "` is not available in the given store. Skipping")
+      if (verbose) {
+        warning("layer `", layer, "` is not available in the given store. Skipping")
+      }
       next
     }
 
@@ -291,7 +294,7 @@ hfsubset <- function(
     out[[layer]] <- dplyr::collect(.tbl)
     if (layer %in% c("flowpaths", "divides", "nexus", "hydrolocations", "pois", "events")) {
       out[[layer]] <- tryCatch(
-        sf:st_as_sf(out[[layer]]),
+        sf::st_as_sf(out[[layer]]),
         error = function(condition) out[[layer]]
       )
     }
