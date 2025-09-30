@@ -221,64 +221,23 @@ hfsubset <- function(src,
   out <- list()
   has <- function(ly) store_has_layer(store, ly)
 
-  if ("network" %in% lyrs && has("network")) {
-    out[["network"]] <- store_get_layer(store, "network") |>
-      dplyr::filter(hf_id %in% ids) |>
-      dplyr::collect()
-  }
+  for (layer in lyrs) {
+    .tbl <- store_get_layer(store, layer)
 
-  if ("flowpaths" %in% lyrs && has("flowpaths")) {
-    out[["flowpaths"]] <- store_get_layer(store, "flowpaths") |>
-      .filter_by(fp_key, fp_vals) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
-  }
+    # Filter cases
+    if (layer == "network") {
+      .tbl <- dplyr::filter(.tbl, hf_id %in% ids)
+    } else if (layer %in% c("divides", "divide-attributes")) {
+      .tbl <- dplyr::filter(.tbl, divide_id %in% !!net$divide_id)
+    } else if (layer == "nexus") {
+      .tbl <- .filter_by(.tbl, nx_key, nx_valus)
+    } else { # filter by flowpath_id
+      .tbl <- .filter_by(.tbl, fp_key, fp_vals)
+    }
 
-  if ("divides" %in% lyrs && has("divides")) {
-    out[["divides"]] <- store_get_layer(store, "divides") |>
-      dplyr::filter(divide_id %in% !!net$divide_id) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
-  }
-
-  if ("nexus" %in% lyrs && has("nexus")) {
-    out[["nexus"]] <- store_get_layer(store, "nexus") |>
-      .filter_by(nx_key, nx_vals) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
-  }
-
-  if ("divide-attributes" %in% lyrs && has("divide-attributes")) {
-    out[["divide-attributes"]] <- store_get_layer(store, "divide-attributes") |>
-      dplyr::filter(.data$divide_id %in% !!net$divide_id) |>
-      dplyr::collect()
-  }
-
-  if ("flowpath-attributes" %in% lyrs && has("flowpath-attributes")) {
-    out[["flowpath-attributes"]] <- store_get_layer(store, "flowpath-attributes") |>
-      .filter_by(fp_key, fp_vals) |>
-      dplyr::collect()
-  }
-
-  if ("pois" %in% lyrs && has("pois")) {
-    out[["pois"]] <- store_get_layer(store, "pois") |>
-      .filter_by(fp_key, fp_vals) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
-  }
-
-  if ("hydrolocations" %in% lyrs && has("hydrolocations")) {
-    out[["hydrolocations"]] <- store_get_layer(store, "hydrolocations") |>
-      .filter_by(fp_key, fp_vals) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
-  }
-
-  if ("events" %in% lyrs && has("events")) {
-    out[["events"]] <- store_get_layer(store, "events") |>
-      .filter_by(fp_key, fp_vals) |>
-      dplyr::collect() |>
-      sf::st_as_sf()
+    out[[layer]] <-
+      dplyr::collect(.tbl) |>
+      .to_sf_if_geom()
   }
 
   if (!missing(outfile)) {
