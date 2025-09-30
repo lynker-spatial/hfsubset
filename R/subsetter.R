@@ -13,12 +13,12 @@
 
   # S3 File
   if (endsWith(src, ".parquet") || startsWith(src, "s3://") || dir.exists(src)) {
-    arrow_store(src)
+    return(arrow_store(src))
   }
 
   # Local File
   if (endsWith(src, ".gpkg")) {
-    ogr_store(src)
+    return(ogr_store(src))
   }
 
   cli::cli_abort(c("!" = "Could not infer store type from: {src}",
