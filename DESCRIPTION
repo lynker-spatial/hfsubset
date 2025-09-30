@@ -6,14 +6,15 @@ Authors@R:
       given = "Mike", 
       family = "Johnson", 
       email = "mjohnson@lynker.com", 
-      role = c("aut", "cre")
+      role = c("aut", "cre"),
     )
-Description: Generate subsets from NextGen Hydrofabrics.
+Description: Lightweight subsetter for hydrofabric files
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
+    arrow,
     cli,
     dplyr,
     hfutils,

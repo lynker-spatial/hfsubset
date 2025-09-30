@@ -154,12 +154,12 @@ hfsubset <- function(src,
 
   if (!missing(id)) {
     tmp <- .as_tbl(src, "network", store) |>
-      dplyr::filter(.data$flowpath_id == id) |>
+      dplyr::filter(flowpath_id == id) |>
       dplyr::collect()
   } else if (!missing(comid)) {
-    tmp <- dplyr::filter(hfsubset::ref_net, .data$flowpath_id == !!comid)
+    tmp <- dplyr::filter(hfsubset::ref_net, flowpath_id == !!comid)
   } else if (!missing(hl_reference)) {
-    tmp <- dplyr::filter(hfsubset::ref_net, .data$hl_reference == !!hl_reference)
+    tmp <- dplyr::filter(hfsubset::ref_net, hl_reference == !!hl_reference)
   } else {
     cli::cli_alert_danger("Origin must be provided.")
   }
@@ -171,15 +171,15 @@ hfsubset <- function(src,
   cli::cli_alert_info("Origin flowpath: {origin_fp} (VPU: {origin_vpu})")
 
   # ---- build VPU subgraph --------------------------------------------------
-  ids <- dplyr::filter(hfsubset::ref_net, .data$vpuid == tmp$vpuid) |>
+  ids <- dplyr::filter(hfsubset::ref_net, vpuid == tmp$vpuid) |>
     dplyr::select(flowpath_id, flowpath_toid) |>
     dplyr::distinct() |>
-    tidyr::drop_na(.data$flowpath_toid) |>
+    tidyr::drop_na(flowpath_toid) |>
     igraph::graph_from_data_frame(directed = TRUE) |>
     .get_upstream(node_id = tmp$flowpath_id)
 
   net <- .as_tbl(src, "network", store) |>
-    dplyr::filter(.data$hf_id %in% ids) |>
+    dplyr::filter(hf_id %in% ids) |>
     dplyr::collect()
 
   # Decide keys once (flowpath_id schema vs legacy id schema)
@@ -205,7 +205,7 @@ hfsubset <- function(src,
 
   if ("network" %in% lyrs && has("network")) {
     out[["network"]] <- .as_tbl(src, "network", store) |>
-      dplyr::filter(.data$hf_id %in% ids) |>
+      dplyr::filter(hf_id %in% ids) |>
       collect()
   }
 
@@ -218,7 +218,7 @@ hfsubset <- function(src,
 
   if ("divides" %in% lyrs && has("divides")) {
     out[["divides"]] <- .as_tbl(src, "divides", store) |>
-      dplyr::filter(.data$divide_id %in% !!net$divide_id) |>
+      dplyr::filter(divide_id %in% !!net$divide_id) |>
       collect() |>
       st_as_sf()
   }
