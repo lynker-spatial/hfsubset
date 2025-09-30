@@ -26,9 +26,10 @@ looking for the NWIS gage 07187000 you would use `nwis-07187000`.
 ``` r
 library(hfsubset)
 
-hfsubset(gpkg =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
+hfsubset(src =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
          hl_reference = "nwis-07187000") |> 
   lobstr::tree(max_depth = 1)
+#> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
 #> <list>
 #> ├─network: S3<tbl_df/tbl/data.frame>...
@@ -38,9 +39,10 @@ hfsubset(gpkg =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
 #> └─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
 
 
-hfsubset(gpkg =   glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
+hfsubset(src =   glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
          hl_reference = "nwis-07187000") |> 
   lobstr::tree(max_depth = 1)
+#> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
 #> <list>
 #> ├─network: S3<tbl_df/tbl/data.frame>...
@@ -49,9 +51,10 @@ hfsubset(gpkg =   glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
 #> ├─pois: S3<sf/tbl_df/tbl/data.frame>...
 #> └─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
 
-hfsubset(gpkg =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
+hfsubset(src =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
          hl_reference = "nwis-07187000") |> 
   lobstr::tree(max_depth = 1)
+#> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
 #> <list>
 #> ├─network: S3<tbl_df/tbl/data.frame>...
@@ -62,4 +65,17 @@ hfsubset(gpkg =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
 #> ├─flowpath-attributes: S3<tbl_df/tbl/data.frame>...
 #> ├─pois: S3<tbl_df/tbl/data.frame>...
 #> └─hydrolocations: S3<tbl_df/tbl/data.frame>...
+
+# ls://<version>/<domain>/<kind>
+hfsubset(src = "ls://3.0/superconus/reference",
+         hl_reference = "nwis-07187000",
+         lyrs = c("network", "flowpaths", "divides")) |>
+  lobstr::tree(max_depth = 1)
+#> Waiting for authentication in browser...
+#> ℹ Inferred store type: lynker_spatial_store
+#> ℹ Origin flowpath: 7590701 (VPU: 11)
+#> <list>
+#> ├─network: S3<tbl_df/tbl/data.frame>...
+#> ├─flowpaths: S3<sf/tbl_df/tbl/data.frame>...
+#> ├─divides: S3<sf/tbl_df/tbl/data.frame>...
 ```
