@@ -1,6 +1,7 @@
 .Rproj.user
 outputs
 outputs.zip
+*.parquet
 *.gpkg
 *.gpkg-shm
 *.gpkg-wal
