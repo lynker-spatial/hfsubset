@@ -1,5 +1,5 @@
 #' @keywords internal
-lynker_spatial_store <- function(version, domain, kind, ..., conn = duckdb_connection(extensions = "httpfs")) {
+lynker_spatial_store <- function(version, domain, kind, ..., conn = hfutils::duckdb_connection(extensions = "httpfs")) {
   # TODO(justin): this is a mess
 
   if (startsWith(version, "v")) {
@@ -42,7 +42,7 @@ store_has_layer.lynker_spatial_store <- function(store, layer, ...) {
   p <- paste(store$src, layer, "vpuid=01", "part-0.parquet", sep = "/")
 
   ok <- try({
-    tbl_http_parquet(p, conn = store$conn)
+    hfutils::tbl_http(p, conn = store$conn, read_func = "read_parquet")
     TRUE
   }, silent = TRUE)
 
@@ -65,33 +65,5 @@ store_get_layer.lynker_spatial_store <- function(store, layer, ...) {
     sep = "/"
   )
 
-  tbl_http_parquet(urls, conn = store$conn)
-}
-
-
-#' Create a new DuckDB connection.
-#' @param ... Arguments passed to [DBI::dbConnect()].
-#' @param extensions Character vector of extensions to install and load on connect.
-#' @returns A DBI connection to a DuckDB instance.
-#' @keywords internal
-duckdb_connection <- function(..., extensions = character(0)) {
-  conn <- DBI::dbConnect(duckdb::duckdb(), ...)
-
-  if (length(extensions) > 0) {
-    for (ext in extensions) {
-      DBI::dbExecute(conn, paste("INSTALL", ext))
-      DBI::dbExecute(conn, paste("LOAD", ext))
-    }
-  }
-
-  conn
-}
-
-#' @keywords internal
-tbl_http_parquet <- function(urls, ..., conn = duckdb_connection(extensions = "httpfs")) {
-  query <- paste0("SELECT * FROM read_parquet([",
-    paste0("'", urls, "'", collapse = ","),
-  "])")
-
-  dplyr::tbl(conn, dbplyr::sql(query))
+  hfutils::tbl_http(urls, conn = store$conn, read_func = "read_parquet")
 }

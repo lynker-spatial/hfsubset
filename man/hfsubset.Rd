@@ -12,7 +12,8 @@ hfsubset(
   outfile,
   lyrs = c("flowpaths", "divides", "nexus", "network", "hydrolocations", "pois",
     "flowpath-attributes", "divide-attributes", "events"),
-  crs = NULL
+  crs = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
