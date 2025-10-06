@@ -24,7 +24,8 @@ Imports:
     sf,
     tidyr
 Suggests:
-    arrow
+    arrow,
+    nanoarrow
 Remotes: 
     lynker-spatial/hfutils
 Depends: 
