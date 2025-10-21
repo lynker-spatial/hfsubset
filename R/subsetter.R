@@ -161,8 +161,7 @@ hfsubset <- function(
     "hydrolocations",
     "pois",
     "flowpath-attributes",
-    "divide-attributes",
-    "events"
+    "divide-attributes"
   ),
   crs = NULL,
   verbose = FALSE
