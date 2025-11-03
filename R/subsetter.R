@@ -106,7 +106,6 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 }
 
 # Works on lazy tables (Arrow, dbplyr, etc.)
-
 filter_ids_lazy <- function(tbl, ids, cols = c("hf_id", "reference_id")) {
   nm <- colnames(tbl) # no collect; just schema
   present <- intersect(cols, nm)
@@ -284,7 +283,7 @@ hfsubset <- function(
     if (layer %in% c("divides", "divide-attributes")) {
       .tbl <- dplyr::filter(.tbl, divide_id %in% !!net$divide_id)
     } else if (layer == "nexus") {
-      .tbl <- .filter_by(.tbl, nx_key, nx_valus)
+      .tbl <- .filter_by(.tbl, nx_key, nx_vals)
     } else {
       # filter by flowpath_id
       .tbl <- .filter_by(.tbl, fp_key, fp_vals)

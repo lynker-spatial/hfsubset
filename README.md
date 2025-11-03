@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# hfsubset <a href="https://github.com/lynker-spatial/hfsubset"><img src="man/figures/logo.png" align="right" width="25%"/></a>
+# hfsubset
 
 <!-- badges: start -->
 
@@ -12,70 +12,110 @@
 [![Website](https://github.com/mikejohnson51/hfsubset/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/mikejohnson51/hfsubset/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
 
-`hfsubset` offers a lightweight subsetting utility for Lynker Spatial
-Hydrofabrics.
+`hfsubset` provides a lightweight, dependency-minimal subsetting utility
+for working with Lynker Spatial Hydrofabrics. It is designed to quickly
+extract spatial and network subsets of large hydrologic datasets,
+returning only the upstream or contributing features relevant to a
+specified location.
 
-To use, define a source geopackage and a hydrologic location reference
-(e.g. NHDPlusV2 COMID, Hydrofabric ID or hydrolocation reference^\*
-(`hl_reference`)). The function will return an `sf` object for each
-requested layer containing all upstream features.
+## Overview
 
-A `hl_reference` is defined as `{source}-{native_id}`, so, if you were
-looking for the NWIS gage 07187000 you would use `nwis-07187000`.
+The function operates on a Hydrofabric GeoPackage—a standardized
+container for vector-based hydrologic data layers (e.g., flowpaths,
+catchments, waterbodies). Given a reference point such as an NHDPlusV2
+COMID (`comid`), Hydrofabric ID (`id`), or hydrolocation reference
+(`hl_reference`), it identifies and extracts all upstream features
+connected through the hydrologic network.
+
+Each output layer is returned as an `sf` object containing only features
+contributing to the specified reference location. This structure makes
+it straightforward to visualize, analyze, or export targeted drainage
+areas without needing to process the full dataset.
+
+An optional `outfile` parameter allows writing the subsetted layers back
+to a new GeoPackage (or any OGR spec for single layer calls) for
+persistent storage or sharing, or, if left NULL, allows the data to be
+returned in memory.
+
+# Inputs
+
+    -   **src**: Path to a local Hydrofabric GeoPackage/geoparquet (typically containing layers such as flowpaths, catchments, waterbodies, etc.)
+    >   **reference**: A hydrologic location identifier. This can be either:
+    -   `id`: A Hydrofabric ID
+    -   `comid`: An NHDPlusV2 COMID
+    -   `hl_reference`: A Hydrolocation reference (`hl_reference`). A hydrolocation reference (`hl_reference`) is a standardized string that encodes both the data source and the native identifier in the form: `{source}-{native_id}`
+
+This convention allows `hfsubset` to resolve references across multiple
+hydrologic networks or catalog systems without ambiguity.
+
+## Usage
 
 ``` r
 library(hfsubset)
+library(mapview)
 
-hfsubset(src =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
-         hl_reference = "nwis-07187000") |> 
-  lobstr::tree(max_depth = 1)
+x <- hfsubset(src =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
+              hl_reference = "nwis-07187000")
 #> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
+lobstr::tree(x, max_depth = 1)
 #> <list>
-#> ├─network: S3<tbl_df/tbl/data.frame>...
 #> ├─flowpaths: S3<sf/tbl_df/tbl/data.frame>...
 #> ├─divides: S3<sf/tbl_df/tbl/data.frame>...
-#> ├─pois: S3<sf/tbl_df/tbl/data.frame>...
-#> └─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
+#> ├─network: S3<tbl_df/tbl/data.frame>...
+#> ├─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
+#> └─pois: S3<sf/tbl_df/tbl/data.frame>...
+hfview(x)
+#> Google Chrome was not found. Try setting the `CHROMOTE_CHROME` environment variable to the executable of a Chromium-based browser, such as Google Chrome, Chromium or Brave.
+```
+
+<img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
+
+``` r
 
 
-hfsubset(src =   glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
-         hl_reference = "nwis-07187000") |> 
-  lobstr::tree(max_depth = 1)
+y <- hfsubset(src =  glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
+              hl_reference = "nwis-07187000") 
 #> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
+lobstr::tree(y, max_depth = 1)
 #> <list>
-#> ├─network: S3<tbl_df/tbl/data.frame>...
 #> ├─flowpaths: S3<sf/tbl_df/tbl/data.frame>...
 #> ├─divides: S3<sf/tbl_df/tbl/data.frame>...
-#> ├─pois: S3<sf/tbl_df/tbl/data.frame>...
-#> └─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
+#> ├─network: S3<tbl_df/tbl/data.frame>...
+#> ├─hydrolocations: S3<sf/tbl_df/tbl/data.frame>...
+#> └─pois: S3<sf/tbl_df/tbl/data.frame>...
+hfview(y)
+```
 
-hfsubset(src =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
-         hl_reference = "nwis-07187000") |> 
-  lobstr::tree(max_depth = 1)
+<img src="man/figures/README-unnamed-chunk-2-2.png" width="100%" />
+
+``` r
+
+z <- hfsubset(src =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
+              hl_reference = "nwis-07187000")
 #> ℹ Inferred store type: ogr_store
 #> ℹ Origin flowpath: 7590701 (VPU: 11)
+lobstr::tree(z, max_depth = 1)
 #> <list>
-#> ├─network: S3<tbl_df/tbl/data.frame>...
 #> ├─flowpaths: S3<sf/tbl_df/tbl/data.frame>...
 #> ├─divides: S3<sf/tbl_df/tbl/data.frame>...
 #> ├─nexus: S3<sf/tbl_df/tbl/data.frame>...
-#> ├─divide-attributes: S3<tbl_df/tbl/data.frame>...
-#> ├─flowpath-attributes: S3<tbl_df/tbl/data.frame>...
-#> ├─pois: S3<tbl_df/tbl/data.frame>...
-#> └─hydrolocations: S3<tbl_df/tbl/data.frame>...
-
-# ls://<version>/<domain>/<kind>
-hfsubset(src = "ls://3.0/superconus/reference",
-         hl_reference = "nwis-07187000",
-         lyrs = c("network", "flowpaths", "divides")) |>
-  lobstr::tree(max_depth = 1)
-#> Waiting for authentication in browser...
-#> ℹ Inferred store type: lynker_spatial_store
-#> ℹ Origin flowpath: 7590701 (VPU: 11)
-#> <list>
 #> ├─network: S3<tbl_df/tbl/data.frame>...
-#> ├─flowpaths: S3<sf/tbl_df/tbl/data.frame>...
-#> ├─divides: S3<sf/tbl_df/tbl/data.frame>...
+#> ├─hydrolocations: S3<tbl_df/tbl/data.frame>...
+#> ├─pois: S3<tbl_df/tbl/data.frame>...
+#> ├─flowpath-attributes: S3<tbl_df/tbl/data.frame>...
+#> └─divide-attributes: S3<tbl_df/tbl/data.frame>...
+hfview(z)
+```
+
+<img src="man/figures/README-unnamed-chunk-2-3.png" width="100%" />
+
+``` r
+
+# hfutils::lynker_spatial_auth()
+# hfsubset(src = "ls://3.0/superconus/reference",
+#          hl_reference = "nwis-07187000",
+#          lyrs = c("network", "flowpaths", "divides")) |>
+#   lobstr::tree(max_depth = 1)
 ```

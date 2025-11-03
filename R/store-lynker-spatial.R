@@ -1,13 +1,11 @@
 #' @keywords internal
 lynker_spatial_store <- function(version, domain, kind, ..., conn = hfutils::duckdb_connection(extensions = "httpfs")) {
-  # TODO(justin): this is a mess
 
   if (startsWith(version, "v")) {
     version <- substring(version, 2)
   }
 
   if (version == "2.2") {
-    # TODO(justin): fix this
     stop("Subsetting version 2.2 is not supported by this implementation")
   }
 

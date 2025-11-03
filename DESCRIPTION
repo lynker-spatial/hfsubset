@@ -1,6 +1,6 @@
 Package: hfsubset
 Title: Lightweight subsetter for hydrofabric files
-Version: 0.1
+Version: 0.2
 Authors@R: 
      person(
       given = "Mike", 
@@ -25,7 +25,8 @@ Imports:
     tidyr
 Suggests:
     arrow,
-    nanoarrow
+    nanoarrow,
+    mapview
 Remotes: 
     lynker-spatial/hfutils
 Depends: 

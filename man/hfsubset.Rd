@@ -11,7 +11,7 @@ hfsubset(
   hl_reference,
   outfile,
   lyrs = c("flowpaths", "divides", "nexus", "network", "hydrolocations", "pois",
-    "flowpath-attributes", "divide-attributes", "events"),
+    "flowpath-attributes", "divide-attributes"),
   crs = NULL,
   verbose = FALSE
 )
