@@ -11,7 +11,7 @@ new_store <- function(...) {
 store_has_layer <- function(store, layer, ...) {
   # Preconditions
   stopifnot(all(is.character(layer)))
-  
+
   .pred <- UseMethod("store_has_layer")
 
   # Postconditions

@@ -52,18 +52,23 @@ x <- hfsubset(src =  glue::glue('{base_dir}/v3.0/reference_fabric.gpkg'),
               hl_reference = "nwis-07187000")
 lobstr::tree(x, max_depth = 1)
 hfview(x)
+```
 
-
+```{r, warning=FALSE}
 y <- hfsubset(src =  glue::glue('{base_dir}/v3.0/refactored_fabric.gpkg'),
               hl_reference = "nwis-07187000") 
 lobstr::tree(y, max_depth = 1)
 hfview(y)
+```
 
+```{r, warning=FALSE}
 z <- hfsubset(src =  glue::glue('{base_dir}/CONUS/v2.2/nextgen/v2.2_conus.gpkg'),
               hl_reference = "nwis-07187000")
 lobstr::tree(z, max_depth = 1)
 hfview(z)
+```
 
+```{r, warning=FALSE}
 # hfutils::lynker_spatial_auth()
 # hfsubset(src = "ls://3.0/superconus/reference",
 #          hl_reference = "nwis-07187000",

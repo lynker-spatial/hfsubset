@@ -10,6 +10,7 @@ arrow_store <- function(src) {
 #' @keywords internal
 store_has_layer.arrow_store <- function(store, layer, ...) {
   require_pkg("arrow")
+
   p <- file.path(store$src, layer)
   ok <- try({
     ds <- arrow::open_dataset(p, ...)
@@ -23,5 +24,5 @@ store_has_layer.arrow_store <- function(store, layer, ...) {
 #' @keywords internal
 store_get_layer.arrow_store <- function(store, layer, ...) {
   require_pkg("arrow")
-  arrow::open_dataset(file.path(src, layer), ...)
+  arrow::open_dataset(file.path(store$src, layer), ...)
 }
