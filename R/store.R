@@ -37,3 +37,28 @@ store_get_layer <- function(store, layer, ...) {
 
   .tbl
 }
+
+
+#' Filter a store layer and return collected results
+#'
+#' Dispatches to a store-appropriate backend so that Arrow/DuckDB stores keep
+#' full predicate pushdown while OGR stores bypass dbplyr translation and issue
+#' hand-crafted SQL directly to the underlying SQLite engine (GPKG is SQLite).
+#'
+#' @param store  A store object.
+#' @param layer  Layer name (character scalar).
+#' @param col    Column name to filter on (character scalar).
+#' @param vals   Values to match (character or coercible to character).
+#' @returns A data.frame / sf object with rows matching `col %in% vals`.
+#' @keywords internal
+store_filter_layer <- function(store, layer, col, vals, ...) {
+  UseMethod("store_filter_layer")
+}
+
+#' @keywords internal
+store_filter_layer.default <- function(store, layer, col, vals, ...) {
+  # Lazy filter + collect — full pushdown for Arrow / DuckDB stores
+  store_get_layer(store, layer) |>
+    dplyr::filter(.data[[col]] %in% vals) |>
+    dplyr::collect()
+}

@@ -105,19 +105,6 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
   dplyr::filter(tbl, .data[[col]] %in% vals)
 }
 
-# Works on lazy tables (Arrow, dbplyr, etc.)
-filter_ids_lazy <- function(tbl, ids, cols = c("hf_id", "reference_id")) {
-  nm <- colnames(tbl) # no collect; just schema
-  present <- intersect(cols, nm)
-  if (length(present) == 0) {
-    stop("None of the id columns exist: ", paste(cols, collapse = ", "))
-  }
-  # build OR expression: (col1 %in% ids) | (col2 %in% ids) | ...
-  preds <- lapply(present, function(col) rlang::expr(.data[[!!col]] %in% !!ids))
-  cond <- Reduce(function(a, b) expr((!!a) | (!!b)), preds)
-  dplyr::filter(tbl, !!cond)
-}
-
 # ---- main ------------------------------------------------------------------
 
 #' Subset a NextGen HydroFabric from either a GPKG or layered Hive-partitioned GeoParquets
@@ -151,9 +138,10 @@ hfsubset <- function(
   id,
   comid,
   hl_reference,
-  outfile,
+  outfile = NULL,
   lyrs = c(
     "flowpaths",
+    "flowlines",
     "divides",
     "nexus",
     "network",
@@ -169,23 +157,7 @@ hfsubset <- function(
   store <- .infer_store(src)
   cli::cli_alert_info("Inferred store type: {class(store)[1]}")
 
-  divide_id <-
-    flowpath_id <-
-      flowpath_toid <-
-        hf_id <-
-          toid <-
-            vpuid <- NULL
-
   # ---- helpers -------------------------------------------------------------
-  .abort_origin <- function() {
-    cli::cli_abort(
-      c(
-        "!" = "Couldn't locate an origin row in the {.strong network} layer.",
-        "i" = "Provide exactly one of: {.code id}, {.code comid}, or {.code hl_reference}."
-      )
-    )
-  }
-
   .get_upstream <- function(graph, node_id) {
     v <- as.character(node_id)
     if (!v %in% igraph::V(graph)$name) {
@@ -204,72 +176,72 @@ hfsubset <- function(
     ))
   }
 
-  # ---- find origin row (network layer) -------------------------------------
+  # ---- check store has network ---------------------------------------------
   if (!store_has_layer(store, "network")) {
-    cli::cli_abort(c(
-      "!" = "Couldn't find a {.strong network} layer in the source."
-    ))
+    cli::cli_abort(c("!" = "Couldn't find a {.strong network} layer in the source."))
   }
+
+  # ---- resolve origin: deferred filter → single origin flowline_id + vpuid --
+  net_tbl <- store_get_layer(store, "network")
 
   if (!missing(id)) {
-    tmp <- store_get_layer(store, "network") |>
-      dplyr::filter(flowpath_id == id) |>
-      dplyr::collect()
+    origin_row <- net_tbl |>
+      dplyr::filter(flowpath_id == !!as.character(id))
   } else if (!missing(comid)) {
-    tmp <- dplyr::filter(hfsubset::ref_net, flowpath_id == !!comid)
-  } else if (!missing(hl_reference)) {
-    tmp <- dplyr::filter(hfsubset::ref_net, hl_reference == !!hl_reference)
+    origin_row <- net_tbl |>
+      dplyr::filter(reference_id == !!as.integer(comid))
   } else {
-    cli::cli_alert_danger("Origin must be provided.")
+    origin_row <- net_tbl |>
+      dplyr::filter(hl_reference == !!hl_reference)
   }
 
-  if (nrow(tmp) != 1) {
-    .abort_origin()
-  }
-
-  origin_fp <- tmp$flowpath_id[[1]]
-  origin_vpu <- tmp$vpuid[[1]]
-  cli::cli_alert_info("Origin flowpath: {origin_fp} (VPU: {origin_vpu})")
-
-  # ---- build VPU subgraph --------------------------------------------------
-  ids <- dplyr::filter(hfsubset::ref_net, vpuid == tmp$vpuid) |>
-    dplyr::select(flowpath_id, flowpath_toid) |>
+  origin_row <- origin_row |>
+    dplyr::select(flowpath_id, flowpath_toid, vpuid) |>
     dplyr::distinct() |>
-    tidyr::drop_na(flowpath_toid) |>
-    igraph::graph_from_data_frame(directed = TRUE) |>
-    .get_upstream(node_id = tmp$flowpath_id)
-
-  net <- store_get_layer(store, "network") |>
-    dplyr::filter(hf_id %in% ids) |>
     dplyr::collect()
 
-  # Decide keys once (flowpath_id schema vs legacy id schema)
-  flowpath_flag <- "flowpath_id" %in% names(net)
-  fp_key <- ifelse(flowpath_flag, "flowpath_id", "id")
-  nx_key <- ifelse(flowpath_flag, "nexus_id", "id")
-
-  if (flowpath_flag) {
-    fp_vals <- net$flowpath_id
-  } else {
-    fp_vals <- net$id
+  if (nrow(origin_row) == 0) {
+    cli::cli_abort(c("!" = "Could not locate origin in the {.strong network} layer."))
   }
 
-  if (flowpath_flag) {
-    nx_vals <- unique(net$flowpath_toid)
-  } else {
-    nx_vals <- unique(net$toid)
-  }
+  origin_fp  <- origin_row$flowpath_toid[[1]]
+  origin_vpu <- as.character(origin_row$vpuid[[1]])
+  cli::cli_alert_info("Origin: {origin_fp} (VPU: {origin_vpu})")
+
+  # ---- fetch VPU id table in one shot: all columns needed for graph + id sets
+  # flowline_id/flowline_toid (NHDPlus integers) form a self-contained graph
+  # within the network table. The fp→nex→fp topology cannot be used here
+  # because the nexus table is not exhaustive — many interior nexuses have
+  # no entry, fragmenting the graph and producing incorrect (too few) results.
+  vpu_ids <- net_tbl |>
+    dplyr::filter(vpuid == !!origin_vpu) |>
+    dplyr::select(flowpath_id, flowpath_toid, flowline_id, flowline_toid, poi_id, divide_id) |>
+    dplyr::collect()
+
+  origin_fl <- vpu_ids$flowline_id[vpu_ids$flowpath_toid == origin_fp][1]
+
+  fl_ids <- igraph::graph_from_data_frame(
+    dplyr::filter(vpu_ids, !is.na(flowline_toid)) |>
+      dplyr::select(flowline_id, flowline_toid),
+    directed = TRUE
+  ) |>
+    .get_upstream(node_id = origin_fl)
+
+  vpu_sub  <- dplyr::filter(vpu_ids, flowline_id %in% as.integer(fl_ids)) |>
+    distinct()
+
+  fp_vals  <- unique(vpu_sub$flowpath_id)
+  nex_vals <- unique(vpu_sub$flowpath_toid)
+  poi_vals <- unique(na.omit(vpu_sub$poi_id))
+  div_vals <- unique(vpu_sub$divide_id)
+  fl_vals <- unique(c(vpu_sub$flowline_id, vpu_sub$flowline_toid))
+
+  cli::cli_alert_info("Upstream: {length(fp_vals)} flowpaths, {length(div_vals)} divides")
 
   # ---- filter requested layers --------------------------------------------
   out <- list()
-  has <- function(ly) store_has_layer(store, ly)
 
   for (layer in lyrs) {
-    if (layer == "network") {
-      out[[layer]] <- net
-      next
-    }
-
     if (!store_has_layer(store, layer)) {
       if (verbose) {
         warning("layer `", layer, "` is not available in the given store. Skipping")
@@ -277,20 +249,28 @@ hfsubset <- function(
       next
     }
 
-    .tbl <- store_get_layer(store, layer)
-
-    # Filter cases
-    if (layer %in% c("divides", "divide-attributes")) {
-      .tbl <- dplyr::filter(.tbl, divide_id %in% !!net$divide_id)
-    } else if (layer == "nexus") {
-      .tbl <- .filter_by(.tbl, nx_key, nx_vals)
+    # Filter cases — prefer the layer's native id column where possible.
+    # - nexus: filter by `nexus_id` (nex- space)
+    # - divides / divide-attributes: filter by `divide_id` (preferred)
+    # - hydrolocations / events: filter by `poi_id`
+    # - otherwise: filter by `flowpath_id` (default)
+    if (layer == "nexus") {
+      out[[layer]] <- store_filter_layer(store, layer, "nexus_id", nex_vals)
+    } else if (layer %in% c("divides", "divide-attributes")) {
+      # prefer divide_id when available; fall back to flowpath_id
+      out[[layer]] <- tryCatch(
+        store_filter_layer(store, layer, "divide_id", div_vals),
+        error = function(e) store_filter_layer(store, layer, "flowpath_id", fp_vals)
+      )
+    } else if (layer %in% c("hydrolocations", "events")) {
+      out[[layer]] <- store_filter_layer(store, layer, "poi_id", poi_vals)
+    } else if (layer %in% c("flowpaths", "flowpath-attributes")) {
+      out[[layer]] <- store_filter_layer(store, layer, "flowpath_id", fp_vals)
     } else {
-      # filter by flowpath_id
-      .tbl <- .filter_by(.tbl, fp_key, fp_vals)
+      out[[layer]] <- store_filter_layer(store, layer, "flowline_id", fl_vals)
     }
 
-    out[[layer]] <- dplyr::collect(.tbl)
-    if (layer %in% c("flowpaths", "divides", "nexus", "hydrolocations", "pois", "events")) {
+    if (layer %in% c("flowpaths", "flowlines", "divides", "nexus", "hydrolocations", "pois", "events")) {
       out[[layer]] <- tryCatch(
         sf::st_as_sf(out[[layer]], crs = 5070),
         error = function(condition) out[[layer]]
