@@ -1,0 +1,158 @@
+library(dplyr)
+library(sf)
+library(igraph)
+library(hfsubset)
+library(hfrefactor)
+
+src     <- "/Volumes/JMJ_research/data/hydrofabric/NWMv4/global/superconus_ngen.gpkg"
+out_dir <- "outputs/vpu01_calibration_global"
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+gages <- read.csv("vpu_calibration_subset_gages.csv",
+                  colClasses = c(gage_id = "character", vpuid = "character")) |>
+  filter(vpuid == "01")
+
+cat(sprintf("Running %d VPU-01 gages\n", nrow(gages)))
+
+# Build fp->nex->fp graph once for the whole VPU so we can check the
+# most-downstream element of each subset without re-reading the full network.
+net <- sf::st_read(src, "network", quiet = TRUE)
+nex <- sf::st_read(src, "nexus",   quiet = TRUE) |> sf::st_drop_geometry()
+
+fp_nex  <- net |> sf::st_drop_geometry() |>
+  filter(!is.na(flowpath_id), !is.na(flowpath_toid)) |>
+  select(from = flowpath_id, to = flowpath_toid) |>
+  distinct()
+
+nex_fp  <- nex |>
+  filter(!is.na(nexus_toid)) |>
+  select(from = nexus_id, to = nexus_toid) |>
+  distinct()
+
+vpu_graph <- igraph::graph_from_data_frame(
+  bind_rows(fp_nex, nex_fp), directed = TRUE
+)
+
+results <- vector("list", nrow(gages))
+
+for (i in seq_len(nrow(gages))) {
+  gage_id  <- gages$gage_id[i]
+  hl_ref   <- paste0("nwis-", gage_id)
+  out_path <- file.path(out_dir, sprintf("subset_%s.gpkg", gage_id))
+
+  cat(sprintf("\n[%d/%d] %s\n", i, nrow(gages), hl_ref))
+
+  # ---- subset ----------------------------------------------------------------
+  sub <- tryCatch(
+    hfsubset(src = src, hl_reference = hl_ref, outfile = out_path),
+    error = function(e) {
+      cat(sprintf("  ERROR subsetting: %s\n", conditionMessage(e)))
+      NULL
+    }
+  )
+
+  if (is.null(sub)) {
+    results[[i]] <- list(gage_id = gage_id, subset_ok = FALSE,
+                         invariants_ok = NA, downstream_ok = NA, notes = "subset failed")
+    next
+  }
+
+  # ---- invariant suite -------------------------------------------------------
+  inv_ok <- tryCatch({
+    hfrefactor::hf_check_invariants(
+      "ngen",
+      flowpaths = sub$flowpaths,
+      divides   = sub$divides,
+      nexus     = sub$nexus,
+      strict    = FALSE          # warn, don't stop, so we can collect all results
+    )$ok
+  }, error = function(e) {
+    cat(sprintf("  ERROR in invariants: %s\n", conditionMessage(e)))
+    FALSE
+  })
+
+  # ---- downstream-element check ----------------------------------------------
+  # The origin POI/nexus for this gage must be the most-downstream node.
+  # Strategy: find the origin flowpath from the network table, then walk the
+  # subset fp->nex->fp graph. The terminal node (out-degree == 0 within the
+  # subset, or whose toid is outside the subset) must be a nexus (nex- prefix),
+  # not a flowpath (fp- prefix).
+  ds_ok <- tryCatch({
+    fp_sub  <- sf::st_drop_geometry(sub$flowpaths)
+    nex_sub <- sf::st_drop_geometry(sub$nexus)
+
+    sub_fp_ids  <- fp_sub$flowpath_id
+    sub_nex_ids <- nex_sub$nexus_id
+
+    # The origin nexus is the toid of the origin flowpath (the fp whose
+    # hl_reference matches our gage).
+    origin_fp_row <- net |> sf::st_drop_geometry() |>
+      filter(grepl(hl_ref, hl_reference, fixed = TRUE)) |>
+      select(flowpath_id) |>
+      distinct()
+
+    if (nrow(origin_fp_row) == 0) stop("origin fp not found in network")
+
+    origin_fp  <- origin_fp_row$flowpath_id[1]
+    origin_nex <- fp_sub |> filter(flowpath_id == origin_fp) |>
+      pull(flowpath_toid)
+
+    if (length(origin_nex) == 0 || is.na(origin_nex)) {
+      stop("origin flowpath has no flowpath_toid")
+    }
+
+    # Confirm the origin nexus is in the subset and is a nexus node (nex- prefix)
+    origin_nex_in_sub <- origin_nex %in% sub_nex_ids
+    origin_is_nexus   <- startsWith(origin_nex, "nex-")
+
+    # Also verify no flowpath in the subset drains *further downstream* than
+    # the origin nexus within the subset graph — i.e. origin_nex has no
+    # outgoing edges that land on a node still inside the subset.
+    nex_toid <- nex_sub |> filter(nexus_id == origin_nex) |> pull(nexus_toid)
+    toid_in_subset <- length(nex_toid) > 0 &&
+      !is.na(nex_toid) &&
+      (nex_toid %in% sub_fp_ids | nex_toid %in% sub_nex_ids)
+
+    if (!origin_nex_in_sub) {
+      cat(sprintf("  WARN downstream: origin nexus %s not in subset nexus layer\n", origin_nex))
+      FALSE
+    } else if (!origin_is_nexus) {
+      cat(sprintf("  WARN downstream: terminal node %s is not a nexus (nex- prefix)\n", origin_nex))
+      FALSE
+    } else if (toid_in_subset) {
+      cat(sprintf("  WARN downstream: origin nexus %s drains to %s which is still inside the subset\n",
+                  origin_nex, nex_toid))
+      FALSE
+    } else {
+      cat(sprintf("  OK  downstream: terminal nexus = %s\n", origin_nex))
+      TRUE
+    }
+  }, error = function(e) {
+    cat(sprintf("  ERROR downstream check: %s\n", conditionMessage(e)))
+    FALSE
+  })
+
+  results[[i]] <- list(
+    gage_id       = gage_id,
+    subset_ok     = TRUE,
+    invariants_ok = inv_ok,
+    downstream_ok = ds_ok,
+    notes         = ""
+  )
+
+  cat(sprintf("  invariants: %s | downstream: %s\n",
+              if (inv_ok) "PASS" else "FAIL",
+              if (ds_ok)  "PASS" else "FAIL"))
+}
+
+# ---- summary ---------------------------------------------------------------
+summary_df <- bind_rows(lapply(results, as.data.frame, stringsAsFactors = FALSE))
+write.csv(summary_df,
+          file.path(out_dir, "subset_quality_summary.csv"),
+          row.names = FALSE)
+
+cat(sprintf("\n\nDone. %d/%d subsets OK | %d/%d invariants OK | %d/%d downstream OK\n",
+            sum(summary_df$subset_ok,     na.rm = TRUE), nrow(summary_df),
+            sum(summary_df$invariants_ok, na.rm = TRUE), nrow(summary_df),
+            sum(summary_df$downstream_ok, na.rm = TRUE), nrow(summary_df)))
+cat(sprintf("Summary written to %s\n", file.path(out_dir, "subset_quality_summary.csv")))
