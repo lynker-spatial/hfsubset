@@ -4,8 +4,8 @@ library(igraph)
 library(hfsubset)
 library(hfrefactor)
 
-src     <- "/tmp/superconus_parquet"   # local mirror of s3://.../v4.0/superconus parquet tiles
-out_dir <- "outputs/all_calibration_nwmv4"
+src     <- "s3://lynker-spatial/hydrofabric/v4.0/superconus"
+out_dir <- "outputs/all_calibration_nwmv4_v2"
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 gages <- read.csv("vpu_calibration_subset_gages.csv",
@@ -140,3 +140,23 @@ cat(sprintf("\n\nDone. %d/%d subsets OK | %d/%d invariants OK | %d/%d downstream
             sum(summary_df$invariants_ok, na.rm = TRUE), nrow(summary_df),
             sum(summary_df$downstream_ok, na.rm = TRUE), nrow(summary_df)))
 cat(sprintf("Summary written to %s\n", file.path(out_dir, "subset_quality_summary.csv")))
+
+# ---- upload to S3 -----------------------------------------------------------
+cat("\nUploading subsets and summary to s3://lynker-spatial/hydrofabric/v4.0/...\n")
+gpkg_files <- list.files(out_dir, pattern = "^subset_.*\\.gpkg$", full.names = TRUE)
+for (gpkg in gpkg_files) {
+  gage_id <- sub("\\.gpkg$", "", sub("subset_", "", basename(gpkg)))
+  s3_key  <- sprintf("s3://lynker-spatial/hydrofabric/v4.0/subsets/gage/USGS-%s-ngen.gpkg", gage_id)
+  cat(sprintf("  %s → %s\n", basename(gpkg), s3_key))
+  system2("aws", c("s3", "cp", shQuote(gpkg), shQuote(s3_key),
+                   "--storage-class", "STANDARD_IA", "--no-progress"),
+          stdout = FALSE, stderr = FALSE)
+}
+
+# Upload quality summary
+system2("aws", c("s3", "cp",
+                 shQuote(file.path(out_dir, "subset_quality_summary.csv")),
+                 "s3://lynker-spatial/hydrofabric/v4.0/subsets/gage/subset_quality_summary.csv",
+                 "--no-progress"),
+        stdout = FALSE, stderr = FALSE)
+cat(sprintf("Uploaded %d subset GPKGs + summary to S3.\n", length(gpkg_files)))
