@@ -4,7 +4,7 @@ library(igraph)
 library(hfsubset)
 library(hfrefactor)
 
-src     <- "s3://lynker-spatial/hydrofabric/v4.0/superconus"
+src     <- "/tmp/superconus_parquet"
 out_dir <- "outputs/all_calibration_nwmv4_v2"
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
