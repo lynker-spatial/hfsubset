@@ -15,14 +15,24 @@
 #   run" pattern), keyed by version + ETag so it cannot silently go stale.
 #
 # LICENSING: the sidecar is *data*, a derivative of the hydrofabric — Apache-2.0
-# governs this package's code, not that artifact. The data ships under
-# CC-BY-SA-4.0 (attribution + share-alike: keeps it open and forces derivatives
-# open, while staying usable by NGIAB / CIROH / federal / commercial users —
-# which an -NC clause would have blocked). Declared at the S3 artifact level (a
-# sibling LICENSE/manifest), since it crosses into NGIAB too. CAVEAT: CC-BY-SA
-# is only valid if the *upstream* fabric license permits it (e.g. CC-BY or
-# matching SA); if upstream is ODbL the sidecar must be ODbL instead — confirm
-# the upstream license before publishing. See .sidecar_license_note().
+# governs this package's code, not that artifact. The data is DUAL-LICENSED to
+# support selling it: an open **ODbL** track (strong database share-alike, which
+# motivates commercial users to buy out of the copyleft) plus a separate paid
+# **commercial license**. The open sidecar is therefore ODbL; commercial
+# customers receive it under the commercial terms. Declared at the S3 artifact
+# level (a sibling LICENSE/manifest), since it crosses into NGIAB too.
+#
+# CAVEATS (gate the sell-the-data plan — resolve before relying on revenue):
+#   * Dual-licensing requires holding ALL rights -> a contributor CLA if anyone
+#     else contributes, or you lose the right to relicense commercially.
+#   * You can only sell your VALUE-ADD (curation/QA/processing). The fabric is
+#     built on US public-domain federal data (NHDPlus/NWM/NWIS); the underlying
+#     facts are free and reproducible, so the moat is processing + support, not
+#     the raw bytes.
+#   * If the fabric was produced under federal funding (CIROH/NOAA), the funding
+#     terms may REQUIRE it stay publicly available / forbid exclusive sale.
+#     CHECK the funding agreement first — this is the real risk to monetization.
+# See .sidecar_license_note().
 # ---------------------------------------------------------------------------
 
 #' Local cache directory for downloaded sidecars
@@ -35,7 +45,7 @@
 #' @keywords internal
 .sidecar_license_note <- function() {
   cli::cli_alert_info(
-    "Sidecar data is derived from the Lynker Spatial hydrofabric, licensed CC-BY-SA-4.0 (attribution + share-alike) — separate from this package's Apache-2.0 code."
+    "Sidecar data is derived from the Lynker Spatial hydrofabric: open use under ODbL (share-alike), or a commercial license — separate from this package's Apache-2.0 code."
   )
 }
 
