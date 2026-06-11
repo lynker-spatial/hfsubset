@@ -26,6 +26,29 @@ store_get_layer.ogr_store <- function(store, layer, ...) {
 
 
 #' @keywords internal
+store_layer_cols.ogr_store <- function(store, layer, ...) {
+  sf::st_layers(store$src)$name  # ensure layer exists first
+  row <- sf::st_read(store$src,
+                     query = sprintf('SELECT * FROM "%s" LIMIT 0', layer),
+                     quiet = TRUE)
+  names(row)
+}
+
+
+#' @keywords internal
+# hl_reference in GPKG is often pipe-delimited (e.g. "nwis-X|huc12-Y").
+# Use SQLite LIKE so we match partial values without dbplyr translation.
+store_filter_hl_reference.ogr_store <- function(store, layer, hl_reference, ...) {
+  safe_ref <- gsub("'", "''", hl_reference)
+  sql <- sprintf(
+    'SELECT * FROM "%s" WHERE "hl_reference" LIKE \'%%%s%%\'',
+    layer, safe_ref
+  )
+  sf::st_read(store$src, query = sql, quiet = TRUE)
+}
+
+
+#' @keywords internal
 #
 # For GPKG (= SQLite) files, GDAL routes `ExecuteSQL` through the SQLite
 # engine, so a hand-crafted IN clause works regardless of size.  This avoids

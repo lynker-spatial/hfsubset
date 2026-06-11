@@ -9,11 +9,16 @@ hfsubset(
   id,
   comid,
   hl_reference,
-  outfile,
-  lyrs = c("flowpaths", "divides", "nexus", "network", "hydrolocations", "pois",
-    "flowpath-attributes", "divide-attributes"),
+  gage,
+  xy,
+  outfile = NULL,
+  lyrs = c("flowpaths", "flowlines", "divides", "nexus", "network", "hydrolocations",
+    "pois", "flowpath-attributes", "divide-attributes"),
   crs = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  check = FALSE,
+  cache = TRUE,
+  optimize = TRUE
 )
 }
 \arguments{
@@ -26,6 +31,13 @@ hive-partitioned GeoParquet (e.g., \if{html}{\out{<root>}}/\if{html}{\out{<layer
 
 \item{hl_reference}{Origin \code{hl_reference} tag (e.g. \code{nwis-09112500}).}
 
+\item{gage}{Origin USGS gage id (e.g. \code{"09112500"}). Convenience for
+\code{hl_reference = paste0("nwis-", gage)}; an 8-digit id is expected.}
+
+\item{xy}{Origin point as \code{c(x, y)} (defaults to lon/lat, EPSG:4326).
+Resolved to the containing divide, then to its flowpath. Uses the GPKG
+R-tree on OGR stores; reads the full divides layer otherwise.}
+
 \item{outfile}{Optional path to write the subset to a new GeoPackage.}
 
 \item{lyrs}{Character vector of layer names to extract. Defaults to
@@ -33,6 +45,16 @@ c("flowpaths","divides","nexus","network","hydrolocations","pois",
 "flowpath-attributes","divide-attributes").}
 
 \item{crs}{Optional EPSG/int for sf outputs when reading GeoParquet (recommended if CRS missing).}
+
+\item{check}{Logical. If \code{TRUE}, run \code{hfutils::hf_check_invariants("ngen", ...)} on the
+returned subset (warnings only, does not stop). Default \code{FALSE}.}
+
+\item{cache}{Logical. Reuse an in-memory per-VPU network graph across
+calls (big win for batch subsetting). Default \code{TRUE}. See
+\code{\link[=hfsubset_clear_cache]{hfsubset_clear_cache()}}.}
+
+\item{optimize}{Logical. When writing \code{outfile}, index and optimize the
+GeoPackage via \code{\link[=optimize_gpkg]{optimize_gpkg()}}. Default \code{TRUE}.}
 
 \item{store}{Optional. One of "gpkg" or "geoparquet". If missing, inferred.}
 }

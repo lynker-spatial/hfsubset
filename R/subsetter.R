@@ -119,6 +119,11 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 #' @param id        Origin `flowpath_id` (character).
 #' @param comid     Origin NHDPlusV2 COMID.
 #' @param hl_reference Origin `hl_reference` tag (e.g. `nwis-09112500`).
+#' @param gage      Origin USGS gage id (e.g. `"09112500"`). Convenience for
+#'   `hl_reference = paste0("nwis-", gage)`; an 8-digit id is expected.
+#' @param xy        Origin point as `c(x, y)` (defaults to lon/lat, EPSG:4326).
+#'   Resolved to the containing divide, then to its flowpath. Uses the GPKG
+#'   R-tree on OGR stores; reads the full divides layer otherwise.
 #' @param outfile   Optional path to write the subset to a new GeoPackage.
 #' @param lyrs      Character vector of layer names to extract. Defaults to
 #'   c("flowpaths","divides","nexus","network","hydrolocations","pois",
@@ -126,12 +131,18 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 #' @param crs       Optional EPSG/int for sf outputs when reading GeoParquet (recommended if CRS missing).
 #' @param check     Logical. If `TRUE`, run `hfutils::hf_check_invariants("ngen", ...)` on the
 #'   returned subset (warnings only, does not stop). Default `FALSE`.
+#' @param cache     Logical. Reuse an in-memory per-VPU network graph across
+#'   calls (big win for batch subsetting). Default `TRUE`. See
+#'   [hfsubset_clear_cache()].
+#' @param optimize  Logical. When writing `outfile`, index and optimize the
+#'   GeoPackage via [optimize_gpkg()]. Default `TRUE`.
 #'
 #' @return A named list of tibbles/sf if `outfile` is missing; invisibly the list after writing otherwise.
 #' @importFrom igraph V graph_from_data_frame subcomponent as_ids
 #' @importFrom dplyr filter select distinct left_join mutate pull collect rename bind_rows everything if_any any_of
 #' @importFrom tidyr drop_na
-#' @importFrom cli cli_abort cli_alert_info cli_alert_success
+#' @importFrom cli cli_abort cli_alert_info cli_alert_success cli_alert_warning
+#' @importFrom rlang %||%
 #' @importFrom hfutils as_ogr st_as_sf write_hydrofabric hf_check_invariants
 #' @importFrom sf write_sf st_layers
 #' @export
@@ -140,6 +151,8 @@ hfsubset <- function(
   id,
   comid,
   hl_reference,
+  gage,
+  xy,
   outfile = NULL,
   lyrs = c(
     "flowpaths",
@@ -154,7 +167,9 @@ hfsubset <- function(
   ),
   crs = NULL,
   verbose = FALSE,
-  check = FALSE
+  check = FALSE,
+  cache = TRUE,
+  optimize = TRUE
 ) {
   # Infer store if not provided
   store <- .infer_store(src)
@@ -171,11 +186,12 @@ hfsubset <- function(
     igraph::as_ids(igraph::subcomponent(graph, v, mode = "in"))
   }
 
-  supplied <- c(!missing(id), !missing(comid), !missing(hl_reference))
+  supplied <- c(!missing(id), !missing(comid), !missing(hl_reference),
+                !missing(gage), !missing(xy))
 
   if (sum(supplied) != 1) {
     cli::cli_abort(c(
-      "!" = "Provide exactly one of {.code id}, {.code comid}, or {.code hl_reference}."
+      "!" = "Provide exactly one of {.code id}, {.code comid}, {.code hl_reference}, {.code gage}, or {.code xy}."
     ))
   }
 
@@ -200,6 +216,21 @@ hfsubset <- function(
     comid_col <- if ("hf_id" %in% net_cols) "hf_id" else "reference_id"
     origin_row <- net_tbl |>
       dplyr::filter(.data[[comid_col]] == !!as.character(comid))
+  } else if (!missing(gage)) {
+    gg <- gsub("\\s", "", as.character(gage))
+    if (!grepl("^[0-9]{8}$", gg)) {
+      cli::cli_alert_warning("Gage {.val {gg}} is not an 8-digit USGS id; resolving as {.val nwis-{gg}}.")
+    }
+    origin_row <- store_filter_hl_reference(store, "network", paste0("nwis-", gg))
+  } else if (!missing(xy)) {
+    div <- store_locate_point(store, xy, crs_pt = if (is.null(crs)) 4326L else crs)
+    if (!"divide_id" %in% names(div) || nrow(div) == 0) {
+      cli::cli_abort(c("!" = "No divide contains point ({.val {xy[1]}}, {.val {xy[2]}})."))
+    }
+    origin_div <- div$divide_id[[1]]
+    cli::cli_alert_info("Point resolved to divide {origin_div}")
+    origin_row <- net_tbl |>
+      dplyr::filter(divide_id == !!origin_div)
   } else {
     origin_row <- store_filter_hl_reference(store, "network", hl_reference)
   }
@@ -220,54 +251,94 @@ hfsubset <- function(
   origin_vpu   <- if (has_vpuid) as.character(origin_row$vpuid[[1]]) else NA_character_
   cli::cli_alert_info("Origin: {origin_fp_id} (VPU: {origin_vpu})")
 
-  # ---- fetch VPU id table in one shot: all columns needed for graph + id sets
+  # ---- fetch VPU id table + traversal graph (cached per source + VPU) ------
   # flowline_id/flowline_toid form a self-contained directed graph within the
   # network table. fp→nex→fp topology cannot be used here because the nexus
   # table is not exhaustive — many interior nexuses have no entry, fragmenting
   # the graph and producing incorrect (too few) results.
-  vpu_ids_q <- net_tbl
-  if (has_vpuid && !is.na(origin_vpu)) {
-    vpu_ids_q <- dplyr::filter(vpu_ids_q, vpuid == !!origin_vpu)
-  }
-  vpu_ids <- vpu_ids_q |>
-    dplyr::select(dplyr::any_of(c(
-      "flowpath_id", "flowpath_toid", "flowline_id", "flowline_toid",
-      "poi_id", "divide_id", "mainstem_id", "is_mainstem"
-    ))) |>
-    dplyr::collect()
+  #
+  # NextGen / refactored fabrics carry a flowline_id -> flowline_toid graph (a
+  # flowpath spans many flowlines), so we traverse that. The *reference* fabric
+  # has no flowline columns; its flowpath_id -> flowpath_toid edges already form
+  # a self-contained graph, so we traverse the flowpath graph directly. Both the
+  # collected id table and the constructed igraph are identical for every origin
+  # in a VPU, so we cache them (see hfsubset_clear_cache()).
+  key <- .graph_cache_key(store, origin_vpu)
+  entry <- if (isTRUE(cache)) .graph_cache[[key]] else NULL
 
-  # Find the outlet flowline of the origin flowpath — the one whose toid
-  # does not belong to the same flowpath (i.e. it exits the fp).
-  origin_fp_rows <- unique(vpu_ids[vpu_ids$flowpath_id == origin_fp_id,
-                                    c("flowline_id", "flowline_toid")])
-  if (nrow(origin_fp_rows) == 0) {
-    cli::cli_abort(c("!" = "Origin flowpath {.code {origin_fp_id}} has no flowlines in the network."))
+  if (is.null(entry)) {
+    vpu_ids_q <- net_tbl
+    if (has_vpuid && !is.na(origin_vpu)) {
+      vpu_ids_q <- dplyr::filter(vpu_ids_q, vpuid == !!origin_vpu)
+    }
+    vpu_ids <- vpu_ids_q |>
+      dplyr::select(dplyr::any_of(c(
+        "flowpath_id", "flowpath_toid", "flowline_id", "flowline_toid",
+        "poi_id", "divide_id", "mainstem_id", "is_mainstem"
+      ))) |>
+      dplyr::collect()
+
+    has_flowline <- all(c("flowline_id", "flowline_toid") %in% names(vpu_ids))
+
+    graph <- if (has_flowline) {
+      igraph::graph_from_data_frame(
+        dplyr::filter(vpu_ids, !is.na(flowline_toid), !is.na(flowpath_id)) |>
+          dplyr::select(flowline_id, flowline_toid) |>
+          dplyr::distinct(),
+        directed = TRUE
+      )
+    } else {
+      igraph::graph_from_data_frame(
+        dplyr::filter(vpu_ids, !is.na(flowpath_toid), !is.na(flowpath_id)) |>
+          dplyr::select(flowpath_id, flowpath_toid) |>
+          dplyr::distinct(),
+        directed = TRUE
+      )
+    }
+
+    entry <- list(vpu_ids = vpu_ids, graph = graph, has_flowline = has_flowline)
+    if (isTRUE(cache)) .graph_cache[[key]] <- entry
   }
-  fp_fl_ids <- origin_fp_rows$flowline_id
-  # outlet: its toid is not one of the fp's own mainstem flowlines
-  outlet_mask <- !(origin_fp_rows$flowline_toid %in% fp_fl_ids)
-  origin_fl   <- if (any(outlet_mask, na.rm = TRUE)) {
-    origin_fp_rows$flowline_id[which(outlet_mask)[1]]
+
+  vpu_ids      <- entry$vpu_ids
+  graph        <- entry$graph
+  has_flowline <- entry$has_flowline
+
+  # ---- upstream traversal -------------------------------------------------
+  if (has_flowline) {
+    # Find the outlet flowline of the origin flowpath — the one whose toid
+    # does not belong to the same flowpath (i.e. it exits the fp).
+    origin_fp_rows <- unique(vpu_ids[vpu_ids$flowpath_id == origin_fp_id,
+                                      c("flowline_id", "flowline_toid")])
+    if (nrow(origin_fp_rows) == 0) {
+      cli::cli_abort(c("!" = "Origin flowpath {.code {origin_fp_id}} has no flowlines in the network."))
+    }
+    fp_fl_ids <- origin_fp_rows$flowline_id
+    # outlet: its toid is not one of the fp's own mainstem flowlines
+    outlet_mask <- !(origin_fp_rows$flowline_toid %in% fp_fl_ids)
+    origin_fl   <- if (any(outlet_mask, na.rm = TRUE)) {
+      origin_fp_rows$flowline_id[which(outlet_mask)[1]]
+    } else {
+      fp_fl_ids[[length(fp_fl_ids)]]
+    }
+
+    fl_ids  <- .get_upstream(graph, node_id = origin_fl)
+    vpu_sub <- dplyr::filter(vpu_ids, flowline_id %in% as.integer(fl_ids)) |>
+      distinct()
   } else {
-    fp_fl_ids[[length(fp_fl_ids)]]
+    # Reference fabric: traverse the flowpath_id -> flowpath_toid graph.
+    fp_ids  <- .get_upstream(graph, node_id = origin_fp_id)
+    vpu_sub <- dplyr::filter(vpu_ids, flowpath_id %in% as.numeric(fp_ids)) |>
+      distinct()
   }
 
-  fl_ids <- igraph::graph_from_data_frame(
-    dplyr::filter(vpu_ids, !is.na(flowline_toid), !is.na(flowpath_id)) |>
-      dplyr::select(flowline_id, flowline_toid) |>
-      dplyr::distinct(),
-    directed = TRUE
-  ) |>
-    .get_upstream(node_id = origin_fl)
-
-  vpu_sub  <- dplyr::filter(vpu_ids, flowline_id %in% as.integer(fl_ids)) |>
-    distinct()
-
-  fp_vals  <- unique(na.omit(vpu_sub$flowpath_id))
-  nex_vals <- unique(na.omit(vpu_sub$flowpath_toid))
-  poi_vals <- unique(na.omit(vpu_sub$poi_id))
-  div_vals <- unique(na.omit(vpu_sub$divide_id))
-  fl_vals  <- unique(vpu_sub$flowline_id)
+  # id sets for layer filtering — guard columns that a given schema may lack.
+  .vals <- function(nm) if (nm %in% names(vpu_sub)) unique(na.omit(vpu_sub[[nm]])) else integer(0)
+  fp_vals  <- .vals("flowpath_id")
+  nex_vals <- .vals("flowpath_toid")
+  poi_vals <- .vals("poi_id")
+  div_vals <- .vals("divide_id")
+  fl_vals  <- .vals("flowline_id")
 
   cli::cli_alert_info("Upstream: {length(fp_vals)} flowpaths, {length(div_vals)} divides")
 
@@ -299,8 +370,11 @@ hfsubset <- function(
       out[[layer]] <- store_filter_layer(store, layer, "poi_id", poi_vals)
     } else if (layer %in% c("flowpaths", "flowlines", "flowpath-attributes")) {
       out[[layer]] <- store_filter_layer(store, layer, "flowpath_id", fp_vals)
-    } else {
+    } else if ("flowline_id" %in% store_layer_cols(store, layer)) {
       out[[layer]] <- store_filter_layer(store, layer, "flowline_id", fl_vals)
+    } else {
+      # e.g. the reference `network` layer, which has no flowline_id column.
+      out[[layer]] <- store_filter_layer(store, layer, "flowpath_id", fp_vals)
     }
 
     if (layer %in% c("flowpaths", "flowlines", "divides", "nexus", "hydrolocations", "pois", "events")) {
@@ -318,8 +392,11 @@ hfsubset <- function(
     )
   }
 
-  if (!missing(outfile)) {
-    hfutils::write_hydrofabric(out, outfile, enforce_dm = FALSE)
+  if (!missing(outfile) && !is.null(outfile)) {
+    written <- hfutils::write_hydrofabric(out, outfile, enforce_dm = FALSE)
+    if (isTRUE(optimize)) {
+      try(optimize_gpkg(written, verbose = verbose), silent = !verbose)
+    }
     invisible(out)
   } else {
     out
