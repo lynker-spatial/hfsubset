@@ -1,8 +1,18 @@
 #' Create a lazy OGR store
+#'
+#' Resolves the source's layer names and per-layer CRS once at construction so
+#' repeated `store_has_layer()` / point-lookup calls within a single subset
+#' don't each re-open the file with `sf::st_layers()`.
 #' @param src Source URI
 #' @keywords internal
 ogr_store <- function(src) {
-  store <- new_store(src = src)
+  li <- try(sf::st_layers(src), silent = TRUE)
+  ok <- !inherits(li, "try-error")
+  store <- new_store(
+    src    = src,
+    layers = if (ok) li$name else character(),
+    crs    = if (ok) stats::setNames(li$crs, li$name) else NULL
+  )
   class(store) <- c("ogr_store", class(store))
   store
 }
@@ -10,12 +20,7 @@ ogr_store <- function(src) {
 
 #' @keywords internal
 store_has_layer.ogr_store <- function(store, layer, ...) {
-  layers <- try(sf::st_layers(store$src, ...)$name, silent = TRUE)
-  if (inherits(layers, "try-error")) {
-    return(FALSE)
-  }
-  
-  layer %in% layers
+  layer %in% store$layers
 }
 
 
@@ -27,7 +32,6 @@ store_get_layer.ogr_store <- function(store, layer, ...) {
 
 #' @keywords internal
 store_layer_cols.ogr_store <- function(store, layer, ...) {
-  sf::st_layers(store$src)$name  # ensure layer exists first
   row <- sf::st_read(store$src,
                      query = sprintf('SELECT * FROM "%s" LIMIT 0', layer),
                      quiet = TRUE)

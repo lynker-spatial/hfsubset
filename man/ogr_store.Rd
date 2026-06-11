@@ -10,6 +10,8 @@ ogr_store(src)
 \item{src}{Source URI}
 }
 \description{
-Create a lazy OGR store
+Resolves the source's layer names and per-layer CRS once at construction so
+repeated \code{store_has_layer()} / point-lookup calls within a single subset
+don't each re-open the file with \code{sf::st_layers()}.
 }
 \keyword{internal}

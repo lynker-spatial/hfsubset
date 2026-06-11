@@ -25,11 +25,10 @@ store_locate_point <- function(store, xy, crs_pt = 4326, layer = "divides", ...)
 # then confirm with an exact st_intersects. This is the cheap path NGIAB gets
 # from `rtree_divides_geom`.
 store_locate_point.ogr_store <- function(store, xy, crs_pt = 4326, layer = "divides", ...) {
-  lyrs <- sf::st_layers(store$src)
-  if (!layer %in% lyrs$name) {
+  if (!layer %in% store$layers) {
     cli::cli_abort(c("!" = "No {.strong {layer}} layer in the source for point lookup."))
   }
-  tgt_crs <- lyrs$crs[[which(lyrs$name == layer)[1]]]
+  tgt_crs <- store$crs[[layer]]
 
   pt <- sf::st_sfc(sf::st_point(as.numeric(xy)), crs = crs_pt)
   if (!is.na(sf::st_crs(tgt_crs))) {

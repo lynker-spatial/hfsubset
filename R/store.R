@@ -32,8 +32,10 @@ store_get_layer <- function(store, layer, ...) {
 
   .tbl <- UseMethod("store_get_layer")
 
-  # Postconditions
-  stopifnot(inherits(.tbl, "tbl"))
+  # Postconditions: must be something the dplyr verbs + collect() understand.
+  # dbplyr tbls inherit "tbl"; arrow datasets/queries are ArrowObjects (NOT
+  # "tbl") yet support the same lazy filter/collect contract, so accept both.
+  stopifnot(inherits(.tbl, "tbl") || inherits(.tbl, "ArrowObject"))
 
   .tbl
 }

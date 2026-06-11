@@ -175,17 +175,6 @@ hfsubset <- function(
   store <- .infer_store(src)
   cli::cli_alert_info("Inferred store type: {class(store)[1]}")
 
-  # ---- helpers -------------------------------------------------------------
-  .get_upstream <- function(graph, node_id) {
-    v <- as.character(node_id)
-    if (!v %in% igraph::V(graph)$name) {
-      cli::cli_abort(c(
-        "!" = "Origin node {.code {v}} not present in the VPU graph."
-      ))
-    }
-    igraph::as_ids(igraph::subcomponent(graph, v, mode = "in"))
-  }
-
   supplied <- c(!missing(id), !missing(comid), !missing(hl_reference),
                 !missing(gage), !missing(xy))
 
@@ -251,86 +240,15 @@ hfsubset <- function(
   origin_vpu   <- if (has_vpuid) as.character(origin_row$vpuid[[1]]) else NA_character_
   cli::cli_alert_info("Origin: {origin_fp_id} (VPU: {origin_vpu})")
 
-  # ---- fetch VPU id table + traversal graph (cached per source + VPU) ------
-  # flowline_id/flowline_toid form a self-contained directed graph within the
-  # network table. fp→nex→fp topology cannot be used here because the nexus
-  # table is not exhaustive — many interior nexuses have no entry, fragmenting
-  # the graph and producing incorrect (too few) results.
-  #
-  # NextGen / refactored fabrics carry a flowline_id -> flowline_toid graph (a
-  # flowpath spans many flowlines), so we traverse that. The *reference* fabric
-  # has no flowline columns; its flowpath_id -> flowpath_toid edges already form
-  # a self-contained graph, so we traverse the flowpath graph directly. Both the
-  # collected id table and the constructed igraph are identical for every origin
-  # in a VPU, so we cache them (see hfsubset_clear_cache()).
-  key <- .graph_cache_key(store, origin_vpu)
-  entry <- if (isTRUE(cache)) .graph_cache[[key]] else NULL
-
-  if (is.null(entry)) {
-    vpu_ids_q <- net_tbl
-    if (has_vpuid && !is.na(origin_vpu)) {
-      vpu_ids_q <- dplyr::filter(vpu_ids_q, vpuid == !!origin_vpu)
-    }
-    vpu_ids <- vpu_ids_q |>
-      dplyr::select(dplyr::any_of(c(
-        "flowpath_id", "flowpath_toid", "flowline_id", "flowline_toid",
-        "poi_id", "divide_id", "mainstem_id", "is_mainstem"
-      ))) |>
-      dplyr::collect()
-
-    has_flowline <- all(c("flowline_id", "flowline_toid") %in% names(vpu_ids))
-
-    graph <- if (has_flowline) {
-      igraph::graph_from_data_frame(
-        dplyr::filter(vpu_ids, !is.na(flowline_toid), !is.na(flowpath_id)) |>
-          dplyr::select(flowline_id, flowline_toid) |>
-          dplyr::distinct(),
-        directed = TRUE
-      )
-    } else {
-      igraph::graph_from_data_frame(
-        dplyr::filter(vpu_ids, !is.na(flowpath_toid), !is.na(flowpath_id)) |>
-          dplyr::select(flowpath_id, flowpath_toid) |>
-          dplyr::distinct(),
-        directed = TRUE
-      )
-    }
-
-    entry <- list(vpu_ids = vpu_ids, graph = graph, has_flowline = has_flowline)
-    if (isTRUE(cache)) .graph_cache[[key]] <- entry
-  }
-
-  vpu_ids      <- entry$vpu_ids
-  graph        <- entry$graph
-  has_flowline <- entry$has_flowline
-
-  # ---- upstream traversal -------------------------------------------------
-  if (has_flowline) {
-    # Find the outlet flowline of the origin flowpath — the one whose toid
-    # does not belong to the same flowpath (i.e. it exits the fp).
-    origin_fp_rows <- unique(vpu_ids[vpu_ids$flowpath_id == origin_fp_id,
-                                      c("flowline_id", "flowline_toid")])
-    if (nrow(origin_fp_rows) == 0) {
-      cli::cli_abort(c("!" = "Origin flowpath {.code {origin_fp_id}} has no flowlines in the network."))
-    }
-    fp_fl_ids <- origin_fp_rows$flowline_id
-    # outlet: its toid is not one of the fp's own mainstem flowlines
-    outlet_mask <- !(origin_fp_rows$flowline_toid %in% fp_fl_ids)
-    origin_fl   <- if (any(outlet_mask, na.rm = TRUE)) {
-      origin_fp_rows$flowline_id[which(outlet_mask)[1]]
-    } else {
-      fp_fl_ids[[length(fp_fl_ids)]]
-    }
-
-    fl_ids  <- .get_upstream(graph, node_id = origin_fl)
-    vpu_sub <- dplyr::filter(vpu_ids, flowline_id %in% as.integer(fl_ids)) |>
-      distinct()
-  } else {
-    # Reference fabric: traverse the flowpath_id -> flowpath_toid graph.
-    fp_ids  <- .get_upstream(graph, node_id = origin_fp_id)
-    vpu_sub <- dplyr::filter(vpu_ids, flowpath_id %in% as.numeric(fp_ids)) |>
-      distinct()
-  }
+  # ---- upstream traversal --------------------------------------------------
+  # Backend-pushed where possible: ogr_store walks the network in-DB with a
+  # recursive CTE (only upstream rows); other backends collect the VPU edges
+  # once and traverse a cached igraph. Both honor the flowline vs flowpath graph
+  # distinction internally. We rely on the flowline_id -> flowline_toid (or
+  # reference-fabric flowpath) edges, NOT fp->nex->fp topology, because the nexus
+  # table is not exhaustive and would fragment the graph.
+  vpu_sub <- store_upstream_ids(store, origin_fp_id, origin_vpu, has_vpuid,
+                                cache = cache)
 
   # id sets for layer filtering — guard columns that a given schema may lack.
   .vals <- function(nm) if (nm %in% names(vpu_sub)) unique(na.omit(vpu_sub[[nm]])) else integer(0)
