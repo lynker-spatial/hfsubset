@@ -25,6 +25,10 @@ store_has_layer.ogr_store <- function(store, layer, ...) {
 
 
 #' @keywords internal
+# `as_ogr()` returns a `tbl_OGRSQLConnection` (extends dbplyr's `tbl_dbi`), so
+# the later dplyr verbs + `collect()` on this object dispatch through dbplyr at
+# runtime. dbplyr is therefore a required Import even though it is never called
+# as `dbplyr::`; do not drop it on the "unused import" NOTE.
 store_get_layer.ogr_store <- function(store, layer, ...) {
   hfutils::as_ogr(store$src, layer, ...)
 }

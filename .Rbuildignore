@@ -1,6 +1,7 @@
 ^hfsubset\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^LICENSE$
 data-raw
 outputs
 outputs.zip
