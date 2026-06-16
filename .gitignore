@@ -10,3 +10,5 @@ outputs.zip
 .httr-oauth
 .DS_Store
 .quarto
+
+pkgdown_site/

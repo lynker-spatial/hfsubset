@@ -1,0 +1,37 @@
+/* Lynker Spatial brand accents for the hydrofabric pkgdown site.
+   Palette mirrors docs/lynker.scss; rules target pkgdown's Bootstrap 5 DOM. */
+
+$ls-accent:       #1EB5FF;
+$ls-accent-deep:  #1E39B7;
+$ls-surface-2:    #eef4fa;
+$ls-ink:          #122333;
+
+// Navbar: brand logo size + accent underline
+.navbar-brand img { max-height: 2rem; width: auto; }
+.navbar { border-bottom: 3px solid rgba($ls-accent, .45); }
+.navbar .nav-link:hover { color: $ls-accent !important; }
+
+// Section headings: subtle accent bar (matches the Quarto site)
+h2, .page-header h1 {
+  border-bottom: 2px solid rgba($ls-accent, .25);
+  padding-bottom: .3rem;
+}
+h3 { color: $ls-ink; }
+
+// Tables: branded header
+.table thead th, table.table th {
+  background: $ls-surface-2;
+  color: $ls-ink;
+  border-bottom: 2px solid $ls-accent;
+}
+.table tbody tr:hover td { background: rgba($ls-accent, .05); }
+
+// Code: accent rail
+pre, div.sourceCode pre {
+  border-left: 3px solid $ls-accent;
+  background: $ls-surface-2;
+}
+
+// Reference index section titles + footer
+.template-reference-index h2 { color: $ls-accent-deep; }
+footer { border-top: 2px solid rgba($ls-accent, .3); }

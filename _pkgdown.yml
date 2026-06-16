@@ -1,0 +1,51 @@
+url: https://lynker-spatial.github.io/hfsubset
+
+destination: pkgdown_site
+
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#1EB5FF"
+    secondary: "#1E39B7"
+    info: "#66CCFF"
+    bg: "#ffffff"
+    fg: "#1f3347"
+    base_font: { google: "Inter" }
+    heading_font: { google: "Inter" }
+    code_font: { google: "JetBrains Mono" }
+    headings-font-weight: 600
+    link-color: "#1E89FF"
+    link-hover-color: "#1E39B7"
+    code-color: "#1E39B7"
+    border-radius: "0.5rem"
+    navbar-light-bg: "#f7fbff"
+    navbar-light-hover-color: "#1EB5FF"
+  includes:
+    in_header: |
+      <meta name="theme-color" content="#1EB5FF">
+
+navbar:
+  bg: light
+  structure:
+    left:  [reference]
+    right: [stack, lynker, github]
+  components:
+    stack:
+      text: Stack
+      menu:
+        - text: "hfutils — base"
+          href: https://lynker-spatial.github.io/hfutils
+        - text: "hydrofabric — build"
+          href: https://lynker-spatial.github.io/hydrofabric
+        - text: "hfpublish — publish"
+          href: https://lynker-spatial.github.io/hfpublish
+    lynker:
+      text: Lynker Spatial
+      href: https://www.lynker-spatial.com/
+
+footer:
+  structure:
+    left: developed_by
+    right: lynker
+  components:
+    lynker: "The subsetting layer of the [Lynker Spatial](https://www.lynker-spatial.com/) hydrofabric stack"
