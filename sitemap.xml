@@ -1,15 +1,25 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>/404.html</loc></url>
-<url><loc>/LICENSE-text.html</loc></url>
-<url><loc>/authors.html</loc></url>
-<url><loc>/index.html</loc></url>
-<url><loc>/reference/hfsubset.html</loc></url>
-<url><loc>/reference/hfview.html</loc></url>
-<url><loc>/reference/index.html</loc></url>
-<url><loc>/reference/new_store.html</loc></url>
-<url><loc>/reference/ogr_store.html</loc></url>
-<url><loc>/reference/ref_net.html</loc></url>
-<url><loc>/reference/store_get_layer.html</loc></url>
-<url><loc>/reference/store_has_layer.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/404.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/LICENSE-text.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/authors.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/index.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/news/index.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/dot-sidecar_cache_dir.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/dot-sidecar_license_note.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/hfsubset.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/hfsubset_clear_cache.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/hfview.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/index.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/new_store.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/ogr_store.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/optimize_gpkg.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/resolve_sidecar.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_filter_hl_reference.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_filter_layer.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_get_layer.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_has_layer.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_layer_cols.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_locate_point.html</loc></url>
+<url><loc>https://lynker-spatial.github.io/hfsubset/reference/store_upstream_ids.html</loc></url>
 </urlset>
 
