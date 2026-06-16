@@ -23,7 +23,8 @@ hfsubset(
 }
 \arguments{
 \item{src}{Path to a GeoPackage (.gpkg) OR the root directory of layered
-hive-partitioned GeoParquet (e.g., \if{html}{\out{<root>}}/\if{html}{\out{<layer>}}/v1/vpu=01/part-*.parquet).}
+hive-partitioned GeoParquet (e.g., \if{html}{\out{<root>}}/\if{html}{\out{<layer>}}/v1/vpu=01/part-*.parquet).
+The store type (GeoPackage vs GeoParquet) is inferred from \code{src}.}
 
 \item{id}{Origin \code{flowpath_id} (character).}
 
@@ -46,6 +47,8 @@ c("flowpaths","divides","nexus","network","hydrolocations","pois",
 
 \item{crs}{Optional EPSG/int for sf outputs when reading GeoParquet (recommended if CRS missing).}
 
+\item{verbose}{Logical. Emit progress messages. Default \code{FALSE}.}
+
 \item{check}{Logical. If \code{TRUE}, run \code{hfutils::hf_check_invariants("ngen", ...)} on the
 returned subset (warnings only, does not stop). Default \code{FALSE}.}
 
@@ -55,8 +58,6 @@ calls (big win for batch subsetting). Default \code{TRUE}. See
 
 \item{optimize}{Logical. When writing \code{outfile}, index and optimize the
 GeoPackage via \code{\link[=optimize_gpkg]{optimize_gpkg()}}. Default \code{TRUE}.}
-
-\item{store}{Optional. One of "gpkg" or "geoparquet". If missing, inferred.}
 }
 \value{
 A named list of tibbles/sf if \code{outfile} is missing; invisibly the list after writing otherwise.

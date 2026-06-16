@@ -115,7 +115,7 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 #'
 #' @param src       Path to a GeoPackage (.gpkg) OR the root directory of layered
 #'                  hive-partitioned GeoParquet (e.g., <root>/<layer>/v1/vpu=01/part-*.parquet).
-#' @param store     Optional. One of "gpkg" or "geoparquet". If missing, inferred.
+#'                  The store type (GeoPackage vs GeoParquet) is inferred from `src`.
 #' @param id        Origin `flowpath_id` (character).
 #' @param comid     Origin NHDPlusV2 COMID.
 #' @param hl_reference Origin `hl_reference` tag (e.g. `nwis-09112500`).
@@ -129,6 +129,7 @@ st_exists_legacy <- function(gpkg, layer) st_exists(gpkg, layer, "gpkg")
 #'   c("flowpaths","divides","nexus","network","hydrolocations","pois",
 #'     "flowpath-attributes","divide-attributes").
 #' @param crs       Optional EPSG/int for sf outputs when reading GeoParquet (recommended if CRS missing).
+#' @param verbose   Logical. Emit progress messages. Default `FALSE`.
 #' @param check     Logical. If `TRUE`, run `hfutils::hf_check_invariants("ngen", ...)` on the
 #'   returned subset (warnings only, does not stop). Default `FALSE`.
 #' @param cache     Logical. Reuse an in-memory per-VPU network graph across
@@ -189,7 +190,7 @@ hfsubset <- function(
     cli::cli_abort(c("!" = "Couldn't find a {.strong network} layer in the source."))
   }
 
-  # ---- resolve origin: deferred filter → single origin flowline_id + vpuid --
+  # ---- resolve origin: deferred filter -> single origin flowline_id + vpuid --
   net_tbl  <- store_get_layer(store, "network")
   net_cols <- store_layer_cols(store, "network")
   has_vpuid      <- "vpuid"       %in% net_cols
@@ -199,7 +200,7 @@ hfsubset <- function(
       dplyr::filter(flowpath_id == !!as.character(id))
   } else if (!missing(comid)) {
     # NHD COMID lookup: stored as `hf_id` (character) in the new schema after
-    # finalize_data_model renames reference_id → hf_id. A single COMID maps to
+    # finalize_data_model renames reference_id -> hf_id. A single COMID maps to
     # multiple rows (one per flowline in its reconciled group, plus absorbed
     # tributaries).
     comid_col <- if ("hf_id" %in% net_cols) "hf_id" else "reference_id"
@@ -250,7 +251,7 @@ hfsubset <- function(
   vpu_sub <- store_upstream_ids(store, origin_fp_id, origin_vpu, has_vpuid,
                                 cache = cache)
 
-  # id sets for layer filtering — guard columns that a given schema may lack.
+  # id sets for layer filtering -- guard columns that a given schema may lack.
   .vals <- function(nm) if (nm %in% names(vpu_sub)) unique(na.omit(vpu_sub[[nm]])) else integer(0)
   fp_vals  <- .vals("flowpath_id")
   nex_vals <- .vals("flowpath_toid")
@@ -271,7 +272,7 @@ hfsubset <- function(
       next
     }
 
-    # Filter cases — prefer the layer's native id column where possible.
+    # Filter cases -- prefer the layer's native id column where possible.
     # - nexus: filter by `nexus_id` (nex- space)
     # - divides / divide-attributes: filter by `divide_id` (preferred)
     # - hydrolocations / events: filter by `poi_id`

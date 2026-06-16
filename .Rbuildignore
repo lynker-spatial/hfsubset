@@ -11,3 +11,4 @@ outputs.zip
 ^README\.Rmd$
 ^\.github$
 ^_pkgdown\.yaml$
+^pkgdown_site$

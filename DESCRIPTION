@@ -8,7 +8,11 @@ Authors@R:
       email = "mjohnson@lynker.com", 
       role = c("aut", "cre"),
     )
-Description: Lightweight subsetter for hydrofabric files
+Description: A lightweight, dependency-minimal subsetter for hydrofabric
+    products. Given an origin feature (flowpath id, COMID, or hydrolocation
+    reference), it traverses the network upstream and extracts the contributing
+    flowpaths, divides, nexuses, and related layers from a GeoPackage or
+    GeoParquet store.
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

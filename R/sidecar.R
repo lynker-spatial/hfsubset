@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Cached S3 sidecar resolver  (STUB — integration point, not yet wired in)
+# Cached S3 sidecar resolver  (STUB -- integration point, not yet wired in)
 #
 # Design (see also memory: hfsubset is a consumer):
 #   hfsubset is a *consumer* of the hydrofabric. The *producer* pipeline
@@ -7,14 +7,14 @@
 #   each fabric release on the lynker-spatial proxy. The sidecar carries:
 #     * an origin index   : comid / hl_reference -> flowpath_id + vpuid
 #     * a traversal struct : reverse-adjacency, or (eventually) topo_lo/topo_hi
-#   One parquet serves both consumers — hfsubset (R) and NGIAB (Python) — and
+#   One parquet serves both consumers -- hfsubset (R) and NGIAB (Python) -- and
 #   replaces BOTH the bundled `ref_net` and NGIAB's local pickle.
 #
 #   On first use for a (version, vpu) we download the sidecar to a per-user
 #   cache dir and read locally thereafter (the "downloaded + cached on first
 #   run" pattern), keyed by version + ETag so it cannot silently go stale.
 #
-# LICENSING: the sidecar is *data*, a derivative of the hydrofabric — Apache-2.0
+# LICENSING: the sidecar is *data*, a derivative of the hydrofabric -- Apache-2.0
 # governs this package's code, not that artifact. The data is DUAL-LICENSED to
 # support selling it: an open **ODbL** track (strong database share-alike, which
 # motivates commercial users to buy out of the copyleft) plus a separate paid
@@ -22,7 +22,7 @@
 # customers receive it under the commercial terms. Declared at the S3 artifact
 # level (a sibling LICENSE/manifest), since it crosses into NGIAB too.
 #
-# CAVEATS (gate the sell-the-data plan — resolve before relying on revenue):
+# CAVEATS (gate the sell-the-data plan -- resolve before relying on revenue):
 #   * Dual-licensing requires holding ALL rights -> a contributor CLA if anyone
 #     else contributes, or you lose the right to relicense commercially.
 #   * You can only sell your VALUE-ADD (curation/QA/processing). The fabric is
@@ -31,7 +31,7 @@
 #     the raw bytes.
 #   * If the fabric was produced under federal funding (CIROH/NOAA), the funding
 #     terms may REQUIRE it stay publicly available / forbid exclusive sale.
-#     CHECK the funding agreement first — this is the real risk to monetization.
+#     CHECK the funding agreement first -- this is the real risk to monetization.
 # See .sidecar_license_note().
 # ---------------------------------------------------------------------------
 
@@ -45,7 +45,7 @@
 #' @keywords internal
 .sidecar_license_note <- function() {
   cli::cli_alert_info(
-    "Sidecar data is derived from the Lynker Spatial hydrofabric: open use under ODbL (share-alike), or a commercial license — separate from this package's Apache-2.0 code."
+    "Sidecar data is derived from the Lynker Spatial hydrofabric: open use under ODbL (share-alike), or a commercial license -- separate from this package's Apache-2.0 code."
   )
 }
 

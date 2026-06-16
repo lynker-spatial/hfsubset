@@ -87,7 +87,7 @@ store_filter_layer <- function(store, layer, col, vals, ...) {
 
 #' @keywords internal
 store_filter_layer.default <- function(store, layer, col, vals, ...) {
-  # Lazy filter + collect — full pushdown for Arrow / DuckDB stores
+  # Lazy filter + collect -- full pushdown for Arrow / DuckDB stores
   store_get_layer(store, layer) |>
     dplyr::filter(.data[[col]] %in% vals) |>
     dplyr::collect()

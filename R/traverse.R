@@ -3,7 +3,7 @@
 #' Return the subset of the network's id table (one row per upstream
 #' flowline/flowpath) that drains to `origin_fp_id`. The result carries
 #' whichever of `flowpath_id`, `flowpath_toid`, `poi_id`, `divide_id`,
-#' `flowline_id` the schema provides — enough to filter every downstream layer.
+#' `flowline_id` the schema provides -- enough to filter every downstream layer.
 #'
 #' Dispatch picks the cheapest correct traversal for the backend:
 #'   * `ogr_store` pushes the walk into SQLite with a recursive CTE, touching
@@ -97,7 +97,7 @@ store_upstream_ids.ogr_store <- function(store, origin_fp_id, vpu, has_vpuid, ca
 # Arrow / Lynker-Spatial and any other backend: collect the VPU's edge table
 # once and traverse an igraph in memory. Both the collected table and the built
 # graph are identical for every origin in a VPU, so cache them per (source, VPU)
-# — the win for batch subsetting one fabric (see hfsubset_clear_cache()).
+# -- the win for batch subsetting one fabric (see hfsubset_clear_cache()).
 store_upstream_ids.default <- function(store, origin_fp_id, vpu, has_vpuid, cache = TRUE, ...) {
   key   <- .graph_cache_key(store, vpu)
   entry <- if (isTRUE(cache)) .graph_cache[[key]] else NULL

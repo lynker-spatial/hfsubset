@@ -2,7 +2,7 @@
 #
 # Rebuilding the upstream-traversal graph means collect()-ing the VPU's network
 # rows and constructing an igraph every call. Batch workflows (many gages over
-# one fabric/VPU — e.g. the calibration-subset scripts) repeat that work
+# one fabric/VPU -- e.g. the calibration-subset scripts) repeat that work
 # identically. NGIAB's `get_graph()` is `@cache`-decorated and pickles the
 # igraph for the same reason; we keep an in-memory env keyed by source + VPU.
 .graph_cache <- new.env(parent = emptyenv())

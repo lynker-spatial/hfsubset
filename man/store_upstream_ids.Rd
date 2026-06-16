@@ -24,7 +24,7 @@ A data.frame of upstream id columns.
 Return the subset of the network's id table (one row per upstream
 flowline/flowpath) that drains to \code{origin_fp_id}. The result carries
 whichever of \code{flowpath_id}, \code{flowpath_toid}, \code{poi_id}, \code{divide_id},
-\code{flowline_id} the schema provides — enough to filter every downstream layer.
+\code{flowline_id} the schema provides -- enough to filter every downstream layer.
 }
 \details{
 Dispatch picks the cheapest correct traversal for the backend:

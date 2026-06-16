@@ -3,7 +3,7 @@
 # These generics and their methods are unexported, and several generics
 # (store_has_layer, store_get_layer) have no `.default`, so dispatch *must* find
 # the class method or it hard-errors. Rather than hand-maintain a list (the old
-# version was incomplete — it omitted locate_point, upstream_ids, and the
+# version was incomplete -- it omitted locate_point, upstream_ids, and the
 # `.default`s), discover every `generic.class` method in the namespace and
 # register it. New store methods are picked up automatically.
 .onLoad <- function(libname, pkgname) {
