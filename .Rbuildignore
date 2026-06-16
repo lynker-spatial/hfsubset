@@ -11,5 +11,5 @@ outputs.zip
 ^.*\.parquet$
 ^README\.Rmd$
 ^\.github$
-^_pkgdown\.yaml$
+^_pkgdown\.yml$
 ^pkgdown_site$
