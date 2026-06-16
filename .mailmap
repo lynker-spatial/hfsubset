@@ -1,0 +1,6 @@
+# Canonical author identities. Maps historical name/email variants to one
+# identity per contributor (display-time only; commit objects are unchanged).
+Mike Johnson <mjohnson@lynker.com> <mike.johnson@noaa.gov>
+Mike Johnson <mjohnson@lynker.com> <jjohnson@lynker.com>
+Mike Johnson <mjohnson@lynker.com> <mikecp11@gmail.com>
+Justin Singh-M. <justin@justinsingh.me> <justin@justinsingh.me>
